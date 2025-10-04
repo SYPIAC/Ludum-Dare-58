@@ -176,17 +176,29 @@ local function loadLevel(filename)
 	if levelData.playerStart then
 		startX = levelData.playerStart.x
 		startY = levelData.playerStart.y
+		
+		-- Calculate density to maintain consistent weight regardless of size
+		local originalWidth = 50
+		local originalHeight = 75
+		local originalArea = originalWidth * originalHeight
+		local originalDensity = 1
+		
 		if levelData.playerStart.width then
 			playerWidth = levelData.playerStart.width
 		end
 		if levelData.playerStart.height then
 			playerHeight = levelData.playerStart.height
 		end
+		
+		local newArea = playerWidth * playerHeight
+		-- Adjust density inversely to area change to maintain same mass
+		local adjustedDensity = originalDensity * (originalArea / newArea)
+		
 		-- Update player body with new dimensions
 		player.body:destroy()
 		player.body = love.physics.newBody(world, startX, startY, "dynamic")
 		player.shape = love.physics.newRectangleShape(playerWidth, playerHeight)
-		player.fixture = love.physics.newFixture(player.body, player.shape, 1)
+		player.fixture = love.physics.newFixture(player.body, player.shape, adjustedDensity)
 		player.fixture:setFriction(1.0)
 		player.fixture:setRestitution(0.6)
 		player.body:setLinearDamping(linearDamping)
@@ -286,9 +298,18 @@ function love.load()
 
 	-- Set global start position
 	startX, startY = love.graphics.getWidth() * 0.1, love.graphics.getHeight() * 0.9
+	
+	-- Calculate density to maintain consistent weight regardless of size
+	local originalWidth = 50
+	local originalHeight = 75
+	local originalArea = originalWidth * originalHeight
+	local originalDensity = 1
+	local currentArea = playerWidth * playerHeight
+	local adjustedDensity = originalDensity * (originalArea / currentArea)
+	
 	player.body = love.physics.newBody(world, startX, startY, "dynamic")
 	player.shape = love.physics.newRectangleShape(playerWidth, playerHeight)
-	player.fixture = love.physics.newFixture(player.body, player.shape, 1)
+	player.fixture = love.physics.newFixture(player.body, player.shape, adjustedDensity)
 	player.fixture:setFriction(1.0)
 	player.fixture:setRestitution(0.6)
 	player.body:setLinearDamping(linearDamping)

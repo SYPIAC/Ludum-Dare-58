@@ -9,8 +9,8 @@ return {
     playerStart = {
         x = 100,   -- 100 pixels from left edge
         y = 690,   -- 690 pixels from top edge (768 - 78 = 690)
-        width = 50,   -- Optional: custom player width
-        height = 75   -- Optional: custom player height
+        width = 165,   -- Optional: custom player width
+        height = 165   -- Optional: custom player height
     },
     
     -- Static boxes: {x, y, width, height} where x,y are top-left coordinates

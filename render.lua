@@ -74,6 +74,11 @@ function Render.drawWizard()
 	love.graphics.setColor(1, 1, 1) -- white tint (no color modification)
 	love.graphics.draw(currentImage, 0, 0, 0, physicsW/imgW, physicsH/imgH, imgW/2, imgH/2)
 	
+	-- Draw debug box around the physics shape
+	love.graphics.setColor(1, 0, 0, 0.8) -- red with transparency
+	love.graphics.setLineWidth(2)
+	love.graphics.rectangle("line", -physicsW/2, -physicsH/2, physicsW, physicsH)
+	
 	love.graphics.pop()
 end
 
