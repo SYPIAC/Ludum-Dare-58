@@ -164,12 +164,6 @@ function Render.drawScrolls()
 			love.graphics.setColor(0.8, 0.6, 0.2)
 			love.graphics.rectangle("fill", -50, -50, 100, 100)
 		end
-		
-			
-		-- Draw a subtle border (always 100x100)
-		love.graphics.setColor(0.6, 0.4, 0.1)
-		love.graphics.setLineWidth(2)
-		love.graphics.rectangle("line", -50, -50, 100, 100)
 			
 			love.graphics.pop()
 		end
@@ -188,11 +182,6 @@ function Render.drawPortals()
 		-- Scale down to 100x100 (assuming original image is larger)
 		local scale = 100 / math.max(portalImage:getWidth(), portalImage:getHeight())
 		love.graphics.draw(portalImage, 0, 0, 0, scale, scale, portalImage:getWidth()/2, portalImage:getHeight()/2)
-			
-		-- Draw a glowing border (always 100x100)
-		love.graphics.setColor(0.2, 0.6, 0.8, 0.8)
-		love.graphics.setLineWidth(3)
-		love.graphics.rectangle("line", -50, -50, 100, 100)
 		
 			
 			love.graphics.pop()
