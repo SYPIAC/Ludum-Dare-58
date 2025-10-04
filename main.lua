@@ -21,6 +21,7 @@ local wizardGreenCastingImage
 local backgroundImage
 local scrollImage
 local portalImage
+local spellbookImage
 local spellImages = {} -- Dictionary to store loaded spell images
 local grimoireFont, spellTitleFont, spellDescFont
 
@@ -276,6 +277,7 @@ local function loadLevel(filename)
 		backgroundImage = backgroundImage,
 		scrollImage = scrollImage,
 		portalImage = portalImage,
+		spellbookImage = spellbookImage,
 		spellImages = spellImages,
 		font = font,
 		grimoireFont = grimoireFont,
@@ -304,6 +306,7 @@ function love.load()
 	wizardGreenCastingImage = love.graphics.newImage("gfx/wizard_green_casting.png")
 	scrollImage = love.graphics.newImage("gfx/scroll.png")
 	portalImage = love.graphics.newImage("gfx/portal.png")
+	spellbookImage = love.graphics.newImage("gfx/spellbook.png")
 	
 	-- Load all spell images dynamically
 	loadSpellImages()
@@ -380,6 +383,7 @@ function love.load()
 		backgroundImage = backgroundImage,
 		scrollImage = scrollImage,
 		portalImage = portalImage,
+		spellbookImage = spellbookImage,
 		spellImages = spellImages,
 		font = font,
 		grimoireFont = grimoireFont,

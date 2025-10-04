@@ -30,7 +30,7 @@ local spells = {
 }
 
 local magicSchool = "Transmutation"
-local bookmarks = {"Transmutation", "Evocation", "Abjuration", "Sleep", "Disenchantment"}
+local bookmarks = {"T", "E", "A", "S", "D"}
 
 -- Initialize the spellbook system
 function Spellbook.init()
