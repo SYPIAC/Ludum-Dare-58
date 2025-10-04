@@ -21,6 +21,7 @@ local wizardGreenCastingImage
 local backgroundImage
 local scrollImage
 local portalImage
+local spellImages = {} -- Dictionary to store loaded spell images
 local grimoireFont, spellTitleFont, spellDescFont
 
 local gravityPixelsPerSecond2 = 900 -- positive Y is down in LOVE
@@ -52,6 +53,23 @@ end
 
 local startX, startY = 0, 0 -- will be set in love.load()
 local maxHorizontalSpeed = 400 -- maximum horizontal speed in pixels per second
+
+-- Function to load all spell images
+local function loadSpellImages()
+	spellImages = {}
+	local imageList = Spellbook.getSpellImages()
+	for imagePath, _ in pairs(imageList) do
+		local success, image = pcall(function()
+			return love.graphics.newImage("gfx/" .. imagePath)
+		end)
+		if success then
+			spellImages[imagePath] = image
+			print("Loaded spell image: " .. imagePath)
+		else
+			print("Failed to load spell image: " .. imagePath)
+		end
+	end
+end
 
 
 -- Function to create a static immovable box
@@ -258,6 +276,7 @@ local function loadLevel(filename)
 		backgroundImage = backgroundImage,
 		scrollImage = scrollImage,
 		portalImage = portalImage,
+		spellImages = spellImages,
 		font = font,
 		grimoireFont = grimoireFont,
 		spellTitleFont = spellTitleFont,
@@ -285,6 +304,9 @@ function love.load()
 	wizardGreenCastingImage = love.graphics.newImage("gfx/wizard_green_casting.png")
 	scrollImage = love.graphics.newImage("gfx/scroll.png")
 	portalImage = love.graphics.newImage("gfx/portal.png")
+	
+	-- Load all spell images dynamically
+	loadSpellImages()
 	
 	-- Load additional fonts for grimoire
 	grimoireFont = love.graphics.newFont(20)
@@ -358,6 +380,7 @@ function love.load()
 		backgroundImage = backgroundImage,
 		scrollImage = scrollImage,
 		portalImage = portalImage,
+		spellImages = spellImages,
 		font = font,
 		grimoireFont = grimoireFont,
 		spellTitleFont = spellTitleFont,
@@ -375,11 +398,16 @@ end
 local function checkGroundContact()
 	local px, py = player.body:getPosition()
 	
+	-- Calculate dynamic ground check distance based on wizard size
+	-- Add half of the lowest dimension (width or height) to allow bigger wizards to levitate higher
+	local wizardHalfSize = math.min(playerWidth, playerHeight) / 2
+	local dynamicGroundCheckDistance = groundCheckDistance + wizardHalfSize
+	
 	-- Cast a ray downward from the center of the player
 	local rayStartX = px
 	local rayStartY = py
 	local rayEndX = px
-	local rayEndY = py + groundCheckDistance
+	local rayEndY = py + dynamicGroundCheckDistance
 	
 	-- Reset raycast result before performing raycast
 	raycastResult = nil
@@ -392,7 +420,7 @@ local function checkGroundContact()
 	
 	-- Fallback: check if close to bottom wall
 	if not isOnGround then
-		isOnGround = (py + groundCheckDistance) >= love.graphics.getHeight()
+		isOnGround = (py + dynamicGroundCheckDistance) >= love.graphics.getHeight()
 	end
 end
 

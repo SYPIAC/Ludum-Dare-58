@@ -22,7 +22,7 @@ local spells = {
 	[1] = {
 		name = "Become Green",
 		description = "Transform yourself into a vibrant green color, granting camouflage in forest environments.",
-		image = "green.png"
+		image = "icon_1.png"
 	},
 	[2] = { name = "???", description = "Hidden beneath the forest temple", image = "???" },
 	[3] = { name = "???", description = "Follow us on Twitter to unlock this spell", image = "???" },
@@ -89,6 +89,27 @@ end
 -- Get spell effect data
 function Spellbook.getSpellEffect(spellName)
 	return spellEffects[spellName]
+end
+
+-- Get all unique spell images that need to be loaded
+function Spellbook.getSpellImages()
+	local images = {}
+	for _, spell in pairs(spells) do
+		if spell.image and spell.image ~= "???" and not images[spell.image] then
+			images[spell.image] = true
+		end
+	end
+	return images
+end
+
+-- Get image path for a specific spell
+function Spellbook.getSpellImage(spellName)
+	for _, spell in pairs(spells) do
+		if spell.name == spellName then
+			return spell.image
+		end
+	end
+	return nil
 end
 
 return Spellbook

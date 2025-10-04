@@ -1,10 +1,11 @@
 -- Render module for Spell Collector
 -- Handles all drawing operations
 
+local Spellbook = require("spellbook")
 local Render = {}
 
 -- Global variables that need to be exposed from main.lua
-local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, scrollImage, portalImage
+local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, scrollImage, portalImage, spellImages
 local font, grimoireFont, spellTitleFont, spellDescFont
 local isOnGround, grimoireOpen, currentPage, spells, activeSpellEffects, magicSchool, bookmarks
 
@@ -22,6 +23,7 @@ function Render.setGlobals(globals)
 	backgroundImage = globals.backgroundImage
 	scrollImage = globals.scrollImage
 	portalImage = globals.portalImage
+	spellImages = globals.spellImages
 	font = globals.font
 	grimoireFont = globals.grimoireFont
 	spellTitleFont = globals.spellTitleFont
@@ -33,6 +35,15 @@ function Render.setGlobals(globals)
 	activeSpellEffects = globals.activeSpellEffects
 	magicSchool = globals.magicSchool
 	bookmarks = globals.bookmarks
+end
+
+-- Get spell image for a given spell name
+local function getSpellImage(spellName)
+	local imagePath = Spellbook.getSpellImage(spellName)
+	if imagePath and spellImages and spellImages[imagePath] then
+		return spellImages[imagePath]
+	end
+	return nil
 end
 
 -- Get current wizard image based on active spells and casting state
@@ -256,21 +267,35 @@ function Render.drawGrimoire()
 		love.graphics.setColor(0.2, 0.1, 0.0)
 		love.graphics.print(spell.name, spellX + 10, spellY + 10)
 		
-		-- Draw image placeholder
+		-- Draw spell image or placeholder
 		local imgW, imgH = 60, 60
 		local imgX = spellX + 10
 		local imgY = spellY + 35
-		love.graphics.setColor(0.8, 0.8, 0.8)
-		love.graphics.rectangle("fill", imgX, imgY, imgW, imgH)
-		love.graphics.setColor(0.5, 0.5, 0.5)
-		love.graphics.rectangle("line", imgX, imgY, imgW, imgH)
 		
-		-- Draw image placeholder text
-		love.graphics.setFont(font)
-		love.graphics.setColor(0.3, 0.3, 0.3)
-		local placeholderW = font:getWidth(spell.image)
-		local placeholderH = font:getHeight()
-		love.graphics.print(spell.image, imgX + (imgW - placeholderW) / 2, imgY + (imgH - placeholderH) / 2)
+		-- Try to get the spell image
+		local spellImage = getSpellImage(spell.name)
+		if spellImage then
+			-- Draw the actual spell image
+			love.graphics.setColor(1, 1, 1) -- No color tinting
+			local iconW, iconH = spellImage:getDimensions()
+			local scale = math.min(imgW / iconW, imgH / iconH)
+			local scaledW = iconW * scale
+			local scaledH = iconH * scale
+			love.graphics.draw(spellImage, imgX + (imgW - scaledW) / 2, imgY + (imgH - scaledH) / 2, 0, scale, scale)
+		else
+			-- Draw placeholder for spells without images
+			love.graphics.setColor(0.8, 0.8, 0.8)
+			love.graphics.rectangle("fill", imgX, imgY, imgW, imgH)
+			love.graphics.setColor(0.5, 0.5, 0.5)
+			love.graphics.rectangle("line", imgX, imgY, imgW, imgH)
+			
+			-- Draw image placeholder text
+			love.graphics.setFont(font)
+			love.graphics.setColor(0.3, 0.3, 0.3)
+			local placeholderW = font:getWidth(spell.image)
+			local placeholderH = font:getHeight()
+			love.graphics.print(spell.image, imgX + (imgW - placeholderW) / 2, imgY + (imgH - placeholderH) / 2)
+		end
 		
 		-- Draw description
 		love.graphics.setFont(spellDescFont)
