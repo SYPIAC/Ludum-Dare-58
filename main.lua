@@ -10,6 +10,8 @@ local player = {}
 local walls = {}
 local staticBoxes = {} -- Array to store static boxes
 local staticTriangles = {} -- Array to store static triangles
+local scrolls = {} -- Array to store scrolls
+local portals = {} -- Array to store portals
 local currentLevel = nil -- Current level data
 local font
 local wizardImage
@@ -17,6 +19,8 @@ local wizardCastingImage
 local wizardGreenImage
 local wizardGreenCastingImage
 local backgroundImage
+local scrollImage
+local portalImage
 local grimoireFont, spellTitleFont, spellDescFont
 
 local gravityPixelsPerSecond2 = 900 -- positive Y is down in LOVE
@@ -94,6 +98,38 @@ local function createStaticTriangle(x, y, v1x, v1y, v2x, v2y, v3x, v3y)
 	return staticTriangle
 end
 
+-- Function to create a scroll
+-- x, y are the center coordinates
+-- width, height are the dimensions (default 100x100)
+local function createScroll(x, y, width, height)
+	local scroll = {}
+	scroll.x = x
+	scroll.y = y
+	scroll.width = width or 100
+	scroll.height = height or 100
+	scroll.color = {0.8, 0.6, 0.2} -- Golden color for scrolls
+	
+	table.insert(scrolls, scroll)
+	return scroll
+end
+
+-- Function to create a portal
+-- x, y are the center coordinates
+-- width, height are the dimensions (default 100x100)
+-- targetLevel is the level to teleport to (optional)
+local function createPortal(x, y, width, height, targetLevel)
+	local portal = {}
+	portal.x = x
+	portal.y = y
+	portal.width = width or 100
+	portal.height = height or 100
+	portal.targetLevel = targetLevel
+	portal.color = {0.2, 0.6, 0.8} -- Blue color for portals
+	
+	table.insert(portals, portal)
+	return portal
+end
+
 
 -- Function to clear all static shapes
 local function clearStaticShapes()
@@ -113,28 +149,9 @@ local function clearStaticShapes()
 	end
 	staticTriangles = {}
 	
-	-- Update render module with empty arrays
-	Render.setGlobals({
-		player = player,
-		staticBoxes = staticBoxes,
-		staticTriangles = staticTriangles,
-		wizardImage = wizardImage,
-		wizardCastingImage = wizardCastingImage,
-		wizardGreenImage = wizardGreenImage,
-		wizardGreenCastingImage = wizardGreenCastingImage,
-		backgroundImage = backgroundImage,
-		font = font,
-		grimoireFont = grimoireFont,
-		spellTitleFont = spellTitleFont,
-		spellDescFont = spellDescFont,
-		isOnGround = isOnGround,
-		grimoireOpen = function() return Spellbook.isGrimoireOpen() end,
-		currentPage = function() return Spellbook.getCurrentPage() end,
-		spells = function() return Spellbook.getSpells() end,
-		activeSpellEffects = function() return Spellbook.getActiveSpellEffects() end,
-		magicSchool = function() return Spellbook.getMagicSchool() end,
-		bookmarks = function() return Spellbook.getBookmarks() end
-	})
+	-- Clear scrolls and portals (no physics bodies to destroy)
+	scrolls = {}
+	portals = {}
 end
 
 -- Function to load a level from a data file
@@ -155,11 +172,33 @@ local function loadLevel(filename)
 	currentLevel = levelData
 	local w, h = love.graphics.getWidth(), love.graphics.getHeight()
 	
+	-- Load player start position if specified
+	if levelData.playerStart then
+		startX = levelData.playerStart.x
+		startY = levelData.playerStart.y
+		if levelData.playerStart.width then
+			playerWidth = levelData.playerStart.width
+		end
+		if levelData.playerStart.height then
+			playerHeight = levelData.playerStart.height
+		end
+		-- Update player body with new dimensions
+		player.body:destroy()
+		player.body = love.physics.newBody(world, startX, startY, "dynamic")
+		player.shape = love.physics.newRectangleShape(playerWidth, playerHeight)
+		player.fixture = love.physics.newFixture(player.body, player.shape, 1)
+		player.fixture:setFriction(1.0)
+		player.fixture:setRestitution(0.6)
+		player.body:setLinearDamping(linearDamping)
+		player.body:setAngularDamping(angularDamping)
+		player.body:setBullet(true)
+	end
+	
 	-- Load boxes
 	if levelData.boxes then
 		for _, boxData in ipairs(levelData.boxes) do
-			local x = boxData.x * w - boxData.width / 2  -- Convert from relative to absolute coordinates
-			local y = boxData.y * h - boxData.height / 2
+			local x = boxData.x - boxData.width / 2  -- Convert from center to top-left coordinates
+			local y = boxData.y - boxData.height / 2
 			createStaticBox(x, y, boxData.width, boxData.height)
 		end
 	end
@@ -167,9 +206,27 @@ local function loadLevel(filename)
 	-- Load custom triangles
 	if levelData.customTriangles then
 		for _, triData in ipairs(levelData.customTriangles) do
-			local x = triData.x * w
-			local y = triData.y * h
+			local x = triData.x
+			local y = triData.y
 			createStaticTriangle(x, y, triData.v1x, triData.v1y, triData.v2x, triData.v2y, triData.v3x, triData.v3y)
+		end
+	end
+	
+	-- Load scrolls
+	if levelData.scrolls then
+		for _, scrollData in ipairs(levelData.scrolls) do
+			local x = scrollData.x
+			local y = scrollData.y
+			createScroll(x, y, scrollData.width, scrollData.height)
+		end
+	end
+	
+	-- Load portals
+	if levelData.portals then
+		for _, portalData in ipairs(levelData.portals) do
+			local x = portalData.x
+			local y = portalData.y
+			createPortal(x, y, portalData.width, portalData.height, portalData.targetLevel)
 		end
 	end
 	
@@ -180,11 +237,15 @@ local function loadLevel(filename)
 		player = player,
 		staticBoxes = staticBoxes,
 		staticTriangles = staticTriangles,
+		scrolls = scrolls,
+		portals = portals,
 		wizardImage = wizardImage,
 		wizardCastingImage = wizardCastingImage,
 		wizardGreenImage = wizardGreenImage,
 		wizardGreenCastingImage = wizardGreenCastingImage,
 		backgroundImage = backgroundImage,
+		scrollImage = scrollImage,
+		portalImage = portalImage,
 		font = font,
 		grimoireFont = grimoireFont,
 		spellTitleFont = spellTitleFont,
@@ -210,6 +271,8 @@ function love.load()
 	wizardCastingImage = love.graphics.newImage("gfx/wizard_casting.png")
 	wizardGreenImage = love.graphics.newImage("gfx/wizard_green.png")
 	wizardGreenCastingImage = love.graphics.newImage("gfx/wizard_green_casting.png")
+	scrollImage = love.graphics.newImage("gfx/scroll.png")
+	portalImage = love.graphics.newImage("gfx/portal.png")
 	
 	-- Load additional fonts for grimoire
 	grimoireFont = love.graphics.newFont(20)
@@ -265,11 +328,15 @@ function love.load()
 		player = player,
 		staticBoxes = staticBoxes,
 		staticTriangles = staticTriangles,
+		scrolls = scrolls,
+		portals = portals,
 		wizardImage = wizardImage,
 		wizardCastingImage = wizardCastingImage,
 		wizardGreenImage = wizardGreenImage,
 		wizardGreenCastingImage = wizardGreenCastingImage,
 		backgroundImage = backgroundImage,
+		scrollImage = scrollImage,
+		portalImage = portalImage,
 		font = font,
 		grimoireFont = grimoireFont,
 		spellTitleFont = spellTitleFont,

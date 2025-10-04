@@ -4,7 +4,7 @@
 local Render = {}
 
 -- Global variables that need to be exposed from main.lua
-local player, staticBoxes, staticTriangles, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage
+local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, scrollImage, portalImage
 local font, grimoireFont, spellTitleFont, spellDescFont
 local isOnGround, grimoireOpen, currentPage, spells, activeSpellEffects, magicSchool, bookmarks
 
@@ -13,11 +13,15 @@ function Render.setGlobals(globals)
 	player = globals.player
 	staticBoxes = globals.staticBoxes
 	staticTriangles = globals.staticTriangles
+	scrolls = globals.scrolls
+	portals = globals.portals
 	wizardImage = globals.wizardImage
 	wizardCastingImage = globals.wizardCastingImage
 	wizardGreenImage = globals.wizardGreenImage
 	wizardGreenCastingImage = globals.wizardGreenCastingImage
 	backgroundImage = globals.backgroundImage
+	scrollImage = globals.scrollImage
+	portalImage = globals.portalImage
 	font = globals.font
 	grimoireFont = globals.grimoireFont
 	spellTitleFont = globals.spellTitleFont
@@ -88,7 +92,8 @@ end
 
 -- Draw static boxes
 function Render.drawStaticBoxes()
-	for _, staticBox in ipairs(staticBoxes) do
+	if staticBoxes then
+		for _, staticBox in ipairs(staticBoxes) do
 		local x, y = staticBox.body:getPosition()
 		local angle = staticBox.body:getAngle()
 		
@@ -106,12 +111,14 @@ function Render.drawStaticBoxes()
 		love.graphics.rectangle("line", -staticBox.width/2, -staticBox.height/2, staticBox.width, staticBox.height)
 		
 		love.graphics.pop()
+		end
 	end
 end
 
 -- Draw static triangles
 function Render.drawStaticTriangles()
-	for _, staticTriangle in ipairs(staticTriangles) do
+	if staticTriangles then
+		for _, staticTriangle in ipairs(staticTriangles) do
 		local x, y = staticTriangle.body:getPosition()
 		local angle = staticTriangle.body:getAngle()
 		
@@ -135,6 +142,61 @@ function Render.drawStaticTriangles()
 		love.graphics.polygon("line", v1[1], v1[2], v2[1], v2[2], v3[1], v3[2])
 		
 		love.graphics.pop()
+		end
+	end
+end
+
+-- Draw scrolls
+function Render.drawScrolls()
+	if scrolls then
+		for _, scroll in ipairs(scrolls) do
+			love.graphics.push()
+			love.graphics.translate(scroll.x, scroll.y)
+			
+		-- Draw scroll image or fallback rectangle (always 100x100)
+		love.graphics.setColor(1, 1, 1) -- No color tinting
+		if scrollImage then
+			-- Scale down to 100x100 (assuming original image is larger)
+			local scale = 100 / math.max(scrollImage:getWidth(), scrollImage:getHeight())
+			love.graphics.draw(scrollImage, 0, 0, 0, scale, scale, scrollImage:getWidth()/2, scrollImage:getHeight()/2)
+		else
+			-- Fallback: draw a golden rectangle
+			love.graphics.setColor(0.8, 0.6, 0.2)
+			love.graphics.rectangle("fill", -50, -50, 100, 100)
+		end
+		
+			
+		-- Draw a subtle border (always 100x100)
+		love.graphics.setColor(0.6, 0.4, 0.1)
+		love.graphics.setLineWidth(2)
+		love.graphics.rectangle("line", -50, -50, 100, 100)
+			
+			love.graphics.pop()
+		end
+	end
+end
+
+-- Draw portals
+function Render.drawPortals()
+	if portals then
+		for _, portal in ipairs(portals) do
+			love.graphics.push()
+			love.graphics.translate(portal.x, portal.y)
+			
+		-- Draw portal image (always 100x100)
+		love.graphics.setColor(1, 1, 1) -- No color tinting
+		-- Scale down to 100x100 (assuming original image is larger)
+		local scale = 100 / math.max(portalImage:getWidth(), portalImage:getHeight())
+		love.graphics.draw(portalImage, 0, 0, 0, scale, scale, portalImage:getWidth()/2, portalImage:getHeight()/2)
+			
+		-- Draw a glowing border (always 100x100)
+		love.graphics.setColor(0.2, 0.6, 0.8, 0.8)
+		love.graphics.setLineWidth(3)
+		love.graphics.rectangle("line", -50, -50, 100, 100)
+		
+			
+			love.graphics.pop()
+		end
 	end
 end
 
@@ -294,6 +356,12 @@ function Render.draw()
 	
 	-- Draw static triangles
 	Render.drawStaticTriangles()
+	
+	-- Draw scrolls (behind wizard)
+	Render.drawScrolls()
+	
+	-- Draw portals (behind wizard)
+	Render.drawPortals()
 	
 	-- Draw wizard
 	Render.drawWizard()
