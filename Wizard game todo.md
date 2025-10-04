@@ -1,0 +1,19 @@
+- [ ] Make a level editor
+	- Need to be able to pick level background, place primitives from main.lua, place scrolls, player start position and portal, give stage name
+	- Save to custom .dat file using the format from level1.dat
+	- [x] Load from game
+- [ ] Make the grimoire work
+	- need to be able to scroll pages forward and back with arrows on the sides and use bookmarks at the bottom
+	- fill out the actual spell array and cast on click, including tying spells to effect callbacks
+	- unlock spells by picking up associated scroll
+- [ ] Animate
+	- [ ] The portal and spell scroll bobbing up and down
+	- [ ] Particle effects for jubilate spell
+	- [ ] Death effect and reset
+	- [ ] Dialogue for wizard(Probably just a text box appearing overhead with an sfx)
+- [ ]  Dynamic objects
+	- Ascending/descending saws for Sean's fortress
+	- Elastic Swing for jumping over a gap in the forest
+- [ ] World screen for picking which world to go next
+- [ ] Implement all spell effects
+- [ ] Design and make the actual game levels
