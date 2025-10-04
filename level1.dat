@@ -1,0 +1,23 @@
+-- Level 1 Data File
+-- This file contains the level data in Lua table format
+-- Each shape type has its own section with an array of shapes
+
+return {
+    -- Static boxes: {x, y, width, height} where x,y are top-left coordinates
+    boxes = {
+        {x = 0.3, y = 0.95, width = 80, height = 60},  -- Box on the left side
+        {x = 0.4, y = 0.90, width = 120, height = 80}  -- Box on the right side
+    },
+    
+    -- Custom triangles: {x, y, v1x, v1y, v2x, v2y, v3x, v3y} where x,y are center coordinates
+    customTriangles = {
+        -- Regular triangle (pointing upward)
+        {x = 0.6, y = 0.95, v1x = 0, v1y = -40, v2x = -50, v2y = 40, v3x = 50, v3y = 40},
+        -- Right triangle (top-left corner)
+        {x = 0.5, y = 0.85, v1x = -30, v1y = -25, v2x = -30, v2y = 25, v3x = 30, v3y = 25},
+        -- Custom uneven triangle
+        {x = 0.8, y = 0.7, v1x = -20, v1y = -30, v2x = -40, v2y = 20, v3x = 30, v3y = 10},
+        -- Another custom triangle
+        {x = 0.1, y = 0.6, v1x = 0, v1y = -40, v2x = -50, v2y = 30, v3x = 20, v3y = 25}
+    }
+}

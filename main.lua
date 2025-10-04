@@ -10,6 +10,7 @@ local player = {}
 local walls = {}
 local staticBoxes = {} -- Array to store static boxes
 local staticTriangles = {} -- Array to store static triangles
+local currentLevel = nil -- Current level data
 local font
 local wizardImage
 local wizardCastingImage
@@ -22,6 +23,7 @@ local gravityPixelsPerSecond2 = 900 -- positive Y is down in LOVE
 local moveForce = 1000 -- force applied by A/D keys
 local levitateForce = 5000 -- upward force applied by W key
 local linearDamping = 0.5
+local angularDamping = 0
 local playerWidth = 50
 local playerHeight = 75
 local isOnGround = false
@@ -92,57 +94,26 @@ local function createStaticTriangle(x, y, v1x, v1y, v2x, v2y, v3x, v3y)
 	return staticTriangle
 end
 
--- Helper function to create a regular upward-pointing triangle
--- x, y are the center coordinates
--- width, height are the base width and height of the triangle
-local function createRegularTriangle(x, y, width, height)
-	local halfWidth = width / 2
-	local topX, topY = 0, -height / 2
-	local leftX, leftY = -halfWidth, height / 2
-	local rightX, rightY = halfWidth, height / 2
-	return createStaticTriangle(x, y, topX, topY, leftX, leftY, rightX, rightY)
-end
 
--- Helper function to create a right triangle
--- x, y are the center coordinates
--- width, height are the base width and height of the triangle
--- corner specifies which corner is the right angle: "top-left", "top-right", "bottom-left", "bottom-right"
-local function createRightTriangle(x, y, width, height, corner)
-	local halfWidth = width / 2
-	local halfHeight = height / 2
-	
-	if corner == "top-left" then
-		return createStaticTriangle(x, y, -halfWidth, -halfHeight, -halfWidth, halfHeight, halfWidth, halfHeight)
-	elseif corner == "top-right" then
-		return createStaticTriangle(x, y, halfWidth, -halfHeight, -halfWidth, halfHeight, halfWidth, halfHeight)
-	elseif corner == "bottom-left" then
-		return createStaticTriangle(x, y, -halfWidth, -halfHeight, -halfWidth, halfHeight, halfWidth, -halfHeight)
-	elseif corner == "bottom-right" then
-		return createStaticTriangle(x, y, halfWidth, -halfHeight, -halfWidth, -halfHeight, halfWidth, halfHeight)
-	else
-		-- Default to top-left if invalid corner specified
-		return createStaticTriangle(x, y, -halfWidth, -halfHeight, -halfWidth, halfHeight, halfWidth, halfHeight)
+-- Function to clear all static shapes
+local function clearStaticShapes()
+	-- Clear boxes
+	for _, box in ipairs(staticBoxes) do
+		if box.body then
+			box.body:destroy()
+		end
 	end
-end
-
-function love.load()
-	love.window.setTitle("Spell Collector")
-	font = love.graphics.newFont(16)
-	backgroundImage = love.graphics.newImage("gfx/background.jpg")
-	wizardImage = love.graphics.newImage("gfx/wizard.png")
-	wizardCastingImage = love.graphics.newImage("gfx/wizard_casting.png")
-	wizardGreenImage = love.graphics.newImage("gfx/wizard_green.png")
-	wizardGreenCastingImage = love.graphics.newImage("gfx/wizard_green_casting.png")
+	staticBoxes = {}
 	
-	-- Load additional fonts for grimoire
-	grimoireFont = love.graphics.newFont(20)
-	spellTitleFont = love.graphics.newFont(18)
-	spellDescFont = love.graphics.newFont(14)
+	-- Clear triangles
+	for _, triangle in ipairs(staticTriangles) do
+		if triangle.body then
+			triangle.body:destroy()
+		end
+	end
+	staticTriangles = {}
 	
-	-- Initialize modules
-	Spellbook.init()
-	
-	-- Set up render module with global references
+	-- Update render module with empty arrays
 	Render.setGlobals({
 		player = player,
 		staticBoxes = staticBoxes,
@@ -164,7 +135,90 @@ function love.load()
 		magicSchool = function() return Spellbook.getMagicSchool() end,
 		bookmarks = function() return Spellbook.getBookmarks() end
 	})
+end
 
+-- Function to load a level from a data file
+local function loadLevel(filename)
+	-- Clear existing shapes
+	clearStaticShapes()
+	
+	-- Load level data
+	local success, levelData = pcall(function()
+		return love.filesystem.load(filename)()
+	end)
+	
+	if not success then
+		print("Error loading level: " .. filename)
+		return false
+	end
+	
+	currentLevel = levelData
+	local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+	
+	-- Load boxes
+	if levelData.boxes then
+		for _, boxData in ipairs(levelData.boxes) do
+			local x = boxData.x * w - boxData.width / 2  -- Convert from relative to absolute coordinates
+			local y = boxData.y * h - boxData.height / 2
+			createStaticBox(x, y, boxData.width, boxData.height)
+		end
+	end
+	
+	-- Load custom triangles
+	if levelData.customTriangles then
+		for _, triData in ipairs(levelData.customTriangles) do
+			local x = triData.x * w
+			local y = triData.y * h
+			createStaticTriangle(x, y, triData.v1x, triData.v1y, triData.v2x, triData.v2y, triData.v3x, triData.v3y)
+		end
+	end
+	
+	print("Level loaded: " .. filename)
+	
+	-- Update render module with new arrays
+	Render.setGlobals({
+		player = player,
+		staticBoxes = staticBoxes,
+		staticTriangles = staticTriangles,
+		wizardImage = wizardImage,
+		wizardCastingImage = wizardCastingImage,
+		wizardGreenImage = wizardGreenImage,
+		wizardGreenCastingImage = wizardGreenCastingImage,
+		backgroundImage = backgroundImage,
+		font = font,
+		grimoireFont = grimoireFont,
+		spellTitleFont = spellTitleFont,
+		spellDescFont = spellDescFont,
+		isOnGround = isOnGround,
+		grimoireOpen = function() return Spellbook.isGrimoireOpen() end,
+		currentPage = function() return Spellbook.getCurrentPage() end,
+		spells = function() return Spellbook.getSpells() end,
+		activeSpellEffects = function() return Spellbook.getActiveSpellEffects() end,
+		magicSchool = function() return Spellbook.getMagicSchool() end,
+		bookmarks = function() return Spellbook.getBookmarks() end
+	})
+	
+	return true
+end
+
+
+function love.load()
+	love.window.setTitle("Spell Collector")
+	font = love.graphics.newFont(16)
+	backgroundImage = love.graphics.newImage("gfx/background.jpg")
+	wizardImage = love.graphics.newImage("gfx/wizard.png")
+	wizardCastingImage = love.graphics.newImage("gfx/wizard_casting.png")
+	wizardGreenImage = love.graphics.newImage("gfx/wizard_green.png")
+	wizardGreenCastingImage = love.graphics.newImage("gfx/wizard_green_casting.png")
+	
+	-- Load additional fonts for grimoire
+	grimoireFont = love.graphics.newFont(20)
+	spellTitleFont = love.graphics.newFont(18)
+	spellDescFont = love.graphics.newFont(14)
+	
+	-- Initialize modules
+	Spellbook.init()
+	
 	world = love.physics.newWorld(0, gravityPixelsPerSecond2, true)
 
 	-- Set global start position
@@ -175,7 +229,7 @@ function love.load()
 	player.fixture:setFriction(1.0)
 	player.fixture:setRestitution(0.6)
 	player.body:setLinearDamping(linearDamping)
-	player.body:setAngularDamping(0)
+	player.body:setAngularDamping(angularDamping)
 	player.body:setBullet(true)
 	player.color = {0.2, 0.7, 1.0}
 
@@ -203,17 +257,31 @@ function love.load()
 	walls.rebuild = rebuildWalls
 	walls.rebuild(w, h)
 	
-	-- Create some example static boxes (using top-left coordinates)
-	createStaticBox(w * 0.3 - 40, h * 0.95 - 30, 80, 60) -- Box on the left side
-	createStaticBox(w * 0.4 - 60, h * 0.90 - 40, 120, 80) -- Box on the right side
+	-- Load level from file
+	loadLevel("level1.dat")
 	
-	-- Create some example static triangles (using center coordinates)
-	createRegularTriangle(w * 0.6, h * 0.95, 100, 80) -- Regular triangle on the right side
-	createRightTriangle(w * 0.5, h * 0.85, 60, 50, "top-left") -- Right triangle on the left side
-	
-	-- Create some custom uneven triangles
-	createStaticTriangle(w * 0.8, h * 0.7, -20, -30, -40, 20, 30, 10) -- Custom uneven triangle
-	createStaticTriangle(w * 0.1, h * 0.6, 0, -40, -50, 30, 20, 25) -- Another custom triangle
+	-- Set up render module with global references AFTER loading level
+	Render.setGlobals({
+		player = player,
+		staticBoxes = staticBoxes,
+		staticTriangles = staticTriangles,
+		wizardImage = wizardImage,
+		wizardCastingImage = wizardCastingImage,
+		wizardGreenImage = wizardGreenImage,
+		wizardGreenCastingImage = wizardGreenCastingImage,
+		backgroundImage = backgroundImage,
+		font = font,
+		grimoireFont = grimoireFont,
+		spellTitleFont = spellTitleFont,
+		spellDescFont = spellDescFont,
+		isOnGround = isOnGround,
+		grimoireOpen = function() return Spellbook.isGrimoireOpen() end,
+		currentPage = function() return Spellbook.getCurrentPage() end,
+		spells = function() return Spellbook.getSpells() end,
+		activeSpellEffects = function() return Spellbook.getActiveSpellEffects() end,
+		magicSchool = function() return Spellbook.getMagicSchool() end,
+		bookmarks = function() return Spellbook.getBookmarks() end
+	})
 end
 
 local function checkGroundContact()

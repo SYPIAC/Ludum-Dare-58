@@ -14,7 +14,7 @@ if exist bin\game.love del bin\game.love
 if exist bin\export.exe del bin\export.exe
 
 REM Create the game.love file with all game files
-powershell -Command "Compress-Archive -Force -Path *.lua, gfx -DestinationPath game.zip"
+powershell -Command "Compress-Archive -Force -Path *.lua, *.dat, gfx -DestinationPath game.zip"
 rename game.zip game.love
 move game.love bin\
 
