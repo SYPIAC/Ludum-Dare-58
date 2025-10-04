@@ -1,10 +1,11 @@
 -- Render module for Spell Collector
 -- Handles all drawing operations
 
+local Spellbook = require("spellbook")
 local Render = {}
 
 -- Global variables that need to be exposed from main.lua
-local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, scrollImage, portalImage
+local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, scrollImage, portalImage, spellbookImage, spellImages
 local font, grimoireFont, spellTitleFont, spellDescFont
 local isOnGround, grimoireOpen, currentPage, spells, activeSpellEffects, magicSchool, bookmarks
 
@@ -22,6 +23,8 @@ function Render.setGlobals(globals)
 	backgroundImage = globals.backgroundImage
 	scrollImage = globals.scrollImage
 	portalImage = globals.portalImage
+	spellbookImage = globals.spellbookImage
+	spellImages = globals.spellImages
 	font = globals.font
 	grimoireFont = globals.grimoireFont
 	spellTitleFont = globals.spellTitleFont
@@ -33,6 +36,69 @@ function Render.setGlobals(globals)
 	activeSpellEffects = globals.activeSpellEffects
 	magicSchool = globals.magicSchool
 	bookmarks = globals.bookmarks
+end
+
+-- Get spell image for a given spell name
+local function getSpellImage(spellName)
+	local imagePath = Spellbook.getSpellImage(spellName)
+	if imagePath and spellImages and spellImages[imagePath] then
+		return spellImages[imagePath]
+	end
+	return nil
+end
+
+-- Draw a chevron bookmark
+local function drawChevronBookmark(x, y, width, height, color, isActive)
+	-- Draw the main rectangular part
+	love.graphics.setColor(color)
+	love.graphics.rectangle("fill", x, y, width, height - 10)
+	
+	-- Draw the chevron point at the bottom
+	local chevronPoints = {
+		x, y + height - 10,  -- top-left of chevron
+		x + width/2, y + height,  -- bottom point of chevron
+		x + width, y + height - 10  -- top-right of chevron
+	}
+	love.graphics.polygon("fill", chevronPoints)
+	
+	-- Draw border
+	local borderColor = isActive and {0.4, 0.3, 0.2} or {0.5, 0.4, 0.3}
+	love.graphics.setColor(borderColor)
+	love.graphics.setLineWidth(2)
+	love.graphics.rectangle("line", x, y, width, height - 10)
+	love.graphics.polygon("line", chevronPoints)
+end
+
+-- Draw a triangular arrow button
+local function drawArrowButton(x, y, size, direction, color, isActive)
+	-- direction: "left" or "right"
+	local points = {}
+	
+	if direction == "left" then
+		-- Left-pointing triangle
+		points = {
+			x + size, y,  -- top-right
+			x, y + size/2,  -- left point
+			x + size, y + size  -- bottom-right
+		}
+	else -- right
+		-- Right-pointing triangle
+		points = {
+			x, y,  -- top-left
+			x + size, y + size/2,  -- right point
+			x, y + size  -- bottom-left
+		}
+	end
+	
+	-- Draw the triangle
+	love.graphics.setColor(color)
+	love.graphics.polygon("fill", points)
+	
+	-- Draw border
+	local borderColor = isActive and {0.2, 0.1, 0.0} or {0.3, 0.2, 0.1}
+	love.graphics.setColor(borderColor)
+	love.graphics.setLineWidth(2)
+	love.graphics.polygon("line", points)
 end
 
 -- Get current wizard image based on active spells and casting state
@@ -200,19 +266,25 @@ function Render.drawGrimoire()
 	if not grimoireOpen() then return end
 	
 	local screenW, screenH = love.graphics.getWidth(), love.graphics.getHeight()
-	local pageW = screenW * 0.8
+	local pageW = screenW * 0.9
 	local pageH = screenH * 0.8
 	local pageX = (screenW - pageW) / 2
 	local pageY = (screenH - pageH) / 2
 	
-	-- Draw page background (parchment-like)
-	love.graphics.setColor(0.95, 0.9, 0.8)
-	love.graphics.rectangle("fill", pageX, pageY, pageW, pageH, 8, 8)
-	
-	-- Draw page border
-	love.graphics.setColor(0.7, 0.6, 0.4)
-	love.graphics.setLineWidth(3)
-	love.graphics.rectangle("line", pageX, pageY, pageW, pageH, 8, 8)
+	-- Draw spellbook background image
+	if spellbookImage then
+		love.graphics.setColor(1, 1, 1) -- No color tinting
+		love.graphics.draw(spellbookImage, pageX, pageY, 0, pageW / spellbookImage:getWidth(), pageH / spellbookImage:getHeight())
+	else
+		-- Fallback to rectangle background if image not loaded
+		love.graphics.setColor(0.95, 0.9, 0.8)
+		love.graphics.rectangle("fill", pageX, pageY, pageW, pageH, 8, 8)
+		
+		-- Draw page border
+		love.graphics.setColor(0.7, 0.6, 0.4)
+		love.graphics.setLineWidth(3)
+		love.graphics.rectangle("line", pageX, pageY, pageW, pageH, 8, 8)
+	end
 	
 	-- Draw magic school title at top
 	love.graphics.setFont(grimoireFont)
@@ -223,7 +295,7 @@ function Render.drawGrimoire()
 	-- Draw spells in 2x2 grid
 	local spellW = pageW * 0.45
 	local spellH = pageH * 0.35
-	local spellSpacing = pageW * 0.05
+	local spellSpacing = pageW * 0.03
 	local topSpellY = pageY + 80
 	
 	for i = 1, 4 do
@@ -256,21 +328,35 @@ function Render.drawGrimoire()
 		love.graphics.setColor(0.2, 0.1, 0.0)
 		love.graphics.print(spell.name, spellX + 10, spellY + 10)
 		
-		-- Draw image placeholder
+		-- Draw spell image or placeholder
 		local imgW, imgH = 60, 60
 		local imgX = spellX + 10
 		local imgY = spellY + 35
-		love.graphics.setColor(0.8, 0.8, 0.8)
-		love.graphics.rectangle("fill", imgX, imgY, imgW, imgH)
-		love.graphics.setColor(0.5, 0.5, 0.5)
-		love.graphics.rectangle("line", imgX, imgY, imgW, imgH)
 		
-		-- Draw image placeholder text
-		love.graphics.setFont(font)
-		love.graphics.setColor(0.3, 0.3, 0.3)
-		local placeholderW = font:getWidth(spell.image)
-		local placeholderH = font:getHeight()
-		love.graphics.print(spell.image, imgX + (imgW - placeholderW) / 2, imgY + (imgH - placeholderH) / 2)
+		-- Try to get the spell image
+		local spellImage = getSpellImage(spell.name)
+		if spellImage then
+			-- Draw the actual spell image
+			love.graphics.setColor(1, 1, 1) -- No color tinting
+			local iconW, iconH = spellImage:getDimensions()
+			local scale = math.min(imgW / iconW, imgH / iconH)
+			local scaledW = iconW * scale
+			local scaledH = iconH * scale
+			love.graphics.draw(spellImage, imgX + (imgW - scaledW) / 2, imgY + (imgH - scaledH) / 2, 0, scale, scale)
+		else
+			-- Draw placeholder for spells without images
+			love.graphics.setColor(0.8, 0.8, 0.8)
+			love.graphics.rectangle("fill", imgX, imgY, imgW, imgH)
+			love.graphics.setColor(0.5, 0.5, 0.5)
+			love.graphics.rectangle("line", imgX, imgY, imgW, imgH)
+			
+			-- Draw image placeholder text
+			love.graphics.setFont(font)
+			love.graphics.setColor(0.3, 0.3, 0.3)
+			local placeholderW = font:getWidth(spell.image)
+			local placeholderH = font:getHeight()
+			love.graphics.print(spell.image, imgX + (imgW - placeholderW) / 2, imgY + (imgH - placeholderH) / 2)
+		end
 		
 		-- Draw description
 		love.graphics.setFont(spellDescFont)
@@ -304,25 +390,58 @@ function Render.drawGrimoire()
 		end
 	end
 	
-	-- Draw bookmarks at bottom
-	local bookmarkH = 30
-	local bookmarkY = pageY + pageH - bookmarkH - 10
-	local bookmarkW = (pageW - 20) / #bookmarks()
+	-- Draw chevron bookmarks underneath the spellbook
+	local bookmarkH = 60
+	local bookmarkY = pageY + pageH  -- Position underneath the book
+	local bookmarkW = 40
+	local bookmarkSpacing = 5
+	local totalBookmarkWidth = (#bookmarks() * bookmarkW) + ((#bookmarks() - 1) * bookmarkSpacing)
+	local startBookmarkX = pageX + (pageW - totalBookmarkWidth) / 2  -- Center the bookmarks
 	
 	for i, bookmark in ipairs(bookmarks()) do
-		local bookmarkX = pageX + 10 + (i - 1) * bookmarkW
-		local bookmarkColor = i == currentPage() and {0.9, 0.8, 0.6} or {0.8, 0.7, 0.5}
+		local bookmarkX = startBookmarkX + (i - 1) * (bookmarkW + bookmarkSpacing)
+		local isActive = i == currentPage()
 		
-		love.graphics.setColor(bookmarkColor)
-		love.graphics.rectangle("fill", bookmarkX, bookmarkY, bookmarkW - 2, bookmarkH, 2, 2)
-		love.graphics.setColor(0.6, 0.5, 0.3)
-		love.graphics.rectangle("line", bookmarkX, bookmarkY, bookmarkW - 2, bookmarkH, 2, 2)
+		-- Different colors for each bookmark (like in the reference image)
+		local bookmarkColors = {
+			{0.8, 0.2, 0.2},  -- Red
+			{0.6, 0.8, 0.4},  -- Light yellow-green
+			{0.2, 0.5, 0.2},  -- Dark green
+			{0.6, 0.3, 0.8},  -- Purple
+			{0.4, 0.2, 0.1}   -- Brown
+		}
+		local bookmarkColor = bookmarkColors[i] or {0.5, 0.5, 0.5}  -- Default gray
 		
+		-- Make active bookmark slightly brighter
+		if isActive then
+			bookmarkColor = {
+				math.min(1.0, bookmarkColor[1] + 0.2),
+				math.min(1.0, bookmarkColor[2] + 0.2),
+				math.min(1.0, bookmarkColor[3] + 0.2)
+			}
+		end
+		
+		-- Draw the chevron bookmark
+		drawChevronBookmark(bookmarkX, bookmarkY, bookmarkW, bookmarkH, bookmarkColor, isActive)
+		
+		-- Draw bookmark text
 		love.graphics.setFont(font)
-		love.graphics.setColor(0.2, 0.1, 0.0)
+		love.graphics.setColor(1, 1, 1)  -- White text for visibility
 		local textW = font:getWidth(bookmark)
 		love.graphics.print(bookmark, bookmarkX + (bookmarkW - textW) / 2, bookmarkY + 8)
 	end
+	
+	-- Draw navigation arrows on the sides of the spellbook
+	local arrowSize = 50
+	local arrowY = pageY + (pageH - arrowSize) / 2  -- Center vertically with the spellbook
+	local leftArrowX = pageX - arrowSize  -- Left side of the spellbook
+	local rightArrowX = pageX + pageW  -- Right side of the spellbook
+	
+	-- Left arrow (previous page)
+	drawArrowButton(leftArrowX, arrowY, arrowSize, "left", {0.6, 0.3, 0.2}, false)
+	
+	-- Right arrow (next page)
+	drawArrowButton(rightArrowX, arrowY, arrowSize, "right", {0.6, 0.3, 0.2}, false)
 end
 
 -- Draw UI text
