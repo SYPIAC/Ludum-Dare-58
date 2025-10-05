@@ -1,4 +1,4 @@
-- [ ] Make a level editor
+- [x] Make a level editor
 	- Need to be able to pick level background, place primitives from main.lua, place scrolls, player start position and portal, give stage name
 	- Save to custom .dat file using the format from level1.dat
 	- [x] Load from game
@@ -14,6 +14,6 @@
 - [ ]  Dynamic objects
 	- Ascending/descending saws for Sean's fortress
 	- Elastic Swing for jumping over a gap in the forest
-- [ ] World screen for picking which world to go next
+- [x] World screen for picking which world to go next
 - [ ] Implement all spell effects
-- [ ] Design and make the actual game levels
+- [x] Design and make the actual game levels
