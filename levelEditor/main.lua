@@ -3,7 +3,7 @@
 
 -- Editor state
 local editorState = {
-    mode = "player", -- "player", "box", "scroll", "portal", "triangle", "visibility"
+    mode = "player", -- "player", "box", "scroll", "portal", "triangle", "visibility", "background"
     selectedObject = nil,
     isPlacing = false,
     gridSize = 20,
@@ -20,7 +20,7 @@ local editorState = {
     dragOffsetY = nil, -- Offset for smooth dragging
     fileDialog = {
         active = false,
-        mode = nil, -- "save" or "load"
+        mode = nil, -- "save", "load", or "background"
         files = {},
         selectedIndex = 1,
         currentDir = ".",
@@ -35,13 +35,15 @@ local levelData = {
     boxes = {},
     scrolls = {},
     portals = {},
-    customTriangles = {}
+    customTriangles = {},
+    backgroundImage = "gfx/background.jpg" -- Default background
 }
 
 -- Visual feedback
 local cursorX, cursorY = 0, 0
 local font
 local backgroundImage
+local editorBackgroundImage -- Background image for the editor
 
 -- Colors for different object types
 local colors = {
@@ -378,6 +380,8 @@ local function drawUI()
         love.graphics.print("5 - Triangle", 10, y)
         y = y + 15
         love.graphics.print("6 - Visibility Toggle", 10, y)
+        y = y + 15
+        love.graphics.print("7 - Background Image", 10, y)
         y = y + 20
         
         love.graphics.print("G - Toggle Grid", 10, y)
@@ -449,7 +453,8 @@ local function drawUI()
         
         -- Draw title
         love.graphics.setColor(1, 1, 1)
-        love.graphics.print(dialog.mode:upper() .. " LEVEL", dialogX + 10, dialogY + 10)
+        local title = dialog.mode == "background" and "SELECT BACKGROUND" or (dialog.mode:upper() .. " LEVEL")
+        love.graphics.print(title, dialogX + 10, dialogY + 10)
         
         -- Draw file list
         local listY = dialogY + 40
@@ -457,11 +462,18 @@ local function drawUI()
         love.graphics.setColor(0.1, 0.1, 0.1)
         love.graphics.rectangle("fill", dialogX + 10, listY, dialogW - 20, listH)
         
-        -- Show files (without .dat extension)
+        -- Show files
         for i, file in ipairs(dialog.files) do
             local color = (i == dialog.selectedIndex) and {1, 1, 0} or {0.8, 0.8, 0.8}
             love.graphics.setColor(color)
-            local displayName = file:gsub("%.dat$", "") -- Remove .dat extension for display
+            local displayName
+            if dialog.mode == "background" then
+                -- For background images, show just the filename without path
+                displayName = file:match("([^/\\]+)$") -- Extract just the filename
+            else
+                -- For level files, remove .dat extension
+                displayName = file:gsub("%.dat$", "")
+            end
             love.graphics.print(displayName, dialogX + 15, listY + 10 + (i - 1) * 20)
         end
         
@@ -470,7 +482,8 @@ local function drawUI()
         love.graphics.setColor(0.1, 0.1, 0.1)
         love.graphics.rectangle("fill", dialogX + 10, inputY, dialogW - 20, 30)
         love.graphics.setColor(1, 1, 1)
-        love.graphics.print("Filename: " .. dialog.inputText .. "_", dialogX + 15, inputY + 8)
+        local inputLabel = dialog.mode == "background" and "Path: " or "Filename: "
+        love.graphics.print(inputLabel .. dialog.inputText .. "_", dialogX + 15, inputY + 8)
         
         -- Draw buttons
         local buttonY = inputY + 40
@@ -515,6 +528,29 @@ local function scanDirectory(path)
     return files
 end
 
+-- Helper function to scan for background images
+local function scanBackgroundImages()
+    local images = {}
+    local handle = io.popen('dir "gfx" /b 2>nul')
+    if handle then
+        for line in handle:lines() do
+            if line:match("%.(jpg|jpeg|png|bmp)$") then
+                table.insert(images, "gfx/" .. line)
+            end
+        end
+        handle:close()
+    end
+    
+    -- If no images found, add some default ones
+    if #images == 0 then
+        table.insert(images, "gfx/background.jpg")
+        table.insert(images, "gfx/background2.jpg")
+        table.insert(images, "gfx/background3.jpg")
+    end
+    
+    return images
+end
+
 -- Helper function to save level
 local function saveLevel()
     editorState.fileDialog.active = true
@@ -531,6 +567,41 @@ local function loadLevel()
     editorState.fileDialog.mode = "load"
     editorState.fileDialog.inputText = "level1" -- No .dat extension shown
     editorState.fileDialog.files = scanDirectory(".")
+    editorState.fileDialog.selectedIndex = 1
+    editorState.fileDialog.justOpened = true -- Prevent first key from being added
+end
+
+-- Helper function to load background image in editor
+local function loadEditorBackground()
+    if levelData.backgroundImage then
+        print("Loading editor background: " .. levelData.backgroundImage)
+        local success, img = pcall(function()
+            return love.graphics.newImage(levelData.backgroundImage)
+        end)
+        if success then
+            editorBackgroundImage = img
+            print("Successfully loaded editor background")
+        else
+            print("Failed to load editor background: " .. levelData.backgroundImage)
+            editorBackgroundImage = nil
+        end
+    else
+        print("No background image set in levelData")
+    end
+end
+
+-- Helper function to pick background image
+local function pickBackground()
+    local images = scanBackgroundImages()
+    print("Found " .. #images .. " background images")
+    for i, img in ipairs(images) do
+        print("  " .. i .. ": " .. img)
+    end
+    
+    editorState.fileDialog.active = true
+    editorState.fileDialog.mode = "background"
+    editorState.fileDialog.inputText = levelData.backgroundImage or "gfx/background.jpg"
+    editorState.fileDialog.files = images
     editorState.fileDialog.selectedIndex = 1
     editorState.fileDialog.justOpened = true -- Prevent first key from being added
 end
@@ -608,8 +679,13 @@ local function performSave(filename)
             end
             levelString = levelString .. "\n"
         end
-        levelString = levelString .. "    }\n"
+        levelString = levelString .. "    },\n"
     end
+    
+    -- Background image (always save, with default if not set)
+    local bgImage = levelData.backgroundImage or "gfx/background.jpg"
+    print("Saving background image: " .. bgImage)
+    levelString = levelString .. "    backgroundImage = \"" .. bgImage .. "\"\n"
     
     levelString = levelString .. "}\n"
     
@@ -672,6 +748,13 @@ local function performLoad(filename)
             end
         end
         
+        -- Set default background if not specified
+        if not levelData.backgroundImage then
+            levelData.backgroundImage = "gfx/background.jpg"
+        end
+        
+        -- Load the background image in the editor
+        loadEditorBackground()
         
         -- Show visual feedback
         editorState.lastAction = "Loaded: " .. filename
@@ -849,7 +932,7 @@ function love.load()
         backgroundImage = img
     end
     
-    -- Load default level
+    -- Load default level (this will also load the background image)
     loadLevel()
 end
 
@@ -1057,7 +1140,14 @@ end
 
 function love.draw()
     -- Draw background
-    if backgroundImage then
+    if editorBackgroundImage then
+        local w, h = love.graphics.getWidth(), love.graphics.getHeight()
+        local imgW, imgH = editorBackgroundImage:getDimensions()
+        local scaleX = w / imgW
+        local scaleY = h / imgH
+        love.graphics.setColor(1, 1, 1, 1) -- Full opacity
+        love.graphics.draw(editorBackgroundImage, 0, 0, 0, scaleX, scaleY)
+    elseif backgroundImage then
         local w, h = love.graphics.getWidth(), love.graphics.getHeight()
         local imgW, imgH = backgroundImage:getDimensions()
         local scaleX = w / imgW
@@ -1096,7 +1186,11 @@ function love.mousepressed(x, y, button)
             local fileIndex = math.floor((y - listY - 10) / 20) + 1
             if fileIndex >= 1 and fileIndex <= #dialog.files then
                 dialog.selectedIndex = fileIndex
-                dialog.inputText = dialog.files[fileIndex]:gsub("%.dat$", "") -- Remove .dat extension
+                if dialog.mode == "background" then
+                    dialog.inputText = dialog.files[fileIndex] -- Keep full path for background
+                else
+                    dialog.inputText = dialog.files[fileIndex]:gsub("%.dat$", "") -- Remove .dat extension
+                end
             end
         end
         
@@ -1107,6 +1201,11 @@ function love.mousepressed(x, y, button)
                 performSave(dialog.inputText)
             elseif dialog.mode == "load" then
                 performLoad(dialog.inputText)
+            elseif dialog.mode == "background" then
+                levelData.backgroundImage = dialog.inputText
+                loadEditorBackground() -- Reload the background image
+                editorState.lastAction = "Background set to: " .. dialog.inputText
+                editorState.lastActionTime = love.timer.getTime()
             end
             editorState.fileDialog.active = false
         end
@@ -1236,6 +1335,9 @@ function love.mousepressed(x, y, button)
                         editorState.lastAction = "Triangle " .. objIndex .. " visibility: " .. (levelData.customTriangles[objIndex].visible and "ON" or "OFF")
                         editorState.lastActionTime = love.timer.getTime()
                     end
+                elseif editorState.mode == "background" then
+                    -- Open background picker
+                    pickBackground()
                 end
             end
         elseif button == 2 then -- Right click - delete
@@ -1279,6 +1381,11 @@ function love.keypressed(key)
                 performSave(dialog.inputText)
             elseif dialog.mode == "load" then
                 performLoad(dialog.inputText)
+            elseif dialog.mode == "background" then
+                levelData.backgroundImage = dialog.inputText
+                loadEditorBackground() -- Reload the background image
+                editorState.lastAction = "Background set to: " .. dialog.inputText
+                editorState.lastActionTime = love.timer.getTime()
             end
             editorState.fileDialog.active = false
         elseif key == "escape" then
@@ -1303,6 +1410,8 @@ function love.keypressed(key)
             editorState.mode = "triangle"
         elseif key == "6" then
             editorState.mode = "visibility"
+        elseif key == "7" then
+            editorState.mode = "background"
         elseif key == "g" then
             editorState.showGrid = not editorState.showGrid
         elseif key == "h" then

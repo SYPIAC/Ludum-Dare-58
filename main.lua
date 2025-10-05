@@ -263,6 +263,19 @@ local function loadLevel(filename)
 		end
 	end
 	
+	-- Load background image if specified
+	if levelData.backgroundImage then
+		local success, img = pcall(function()
+			return love.graphics.newImage(levelData.backgroundImage)
+		end)
+		if success then
+			backgroundImage = img
+			print("Loaded background: " .. levelData.backgroundImage)
+		else
+			print("Failed to load background: " .. levelData.backgroundImage)
+		end
+	end
+	
 	print("Level loaded: " .. filename)
 	
 	-- Update render module with new arrays
@@ -369,7 +382,7 @@ function love.load()
 	walls.rebuild(w, h)
 	
 	-- Load level from file
-	loadLevel("level1.dat")
+	loadLevel("level2.dat")
 	
 	-- Set up render module with global references AFTER loading level
 	Render.setGlobals({

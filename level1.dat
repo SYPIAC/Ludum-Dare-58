@@ -25,4 +25,5 @@ return {
     portals = {
         {x = 918, y = 650, width = 100, height = 100, targetLevel = "level2"}
     },
+    backgroundImage = "gfx/background.jpg"
 }
