@@ -9,17 +9,20 @@ return {
         height = 130.5
     },
     boxes = {
-        {x = 400, y = 270, width = 800, height = 20},
-        {x = 598, y = 506, width = 844, height = 22},
-        {x = 514.5, y = 756, width = 1003, height = 24},
-        {x = 221, y = 203, width = 84, height = 20},
-        {x = 103.5, y = 244, width = 13, height = 28},
-        {x = 45.5, y = 178.5, width = 15, height = 71}
+        {x = 400, y = 270, width = 800, height = 20, visible = false},
+        {x = 598, y = 506, width = 844, height = 22, visible = false},
+        {x = 518, y = 754, width = 996, height = 28, visible = false},
+        {x = 221, y = 203, width = 84, height = 20, visible = false},
+        {x = 105.5, y = 240.5, width = 11, height = 35, visible = false},
+        {x = 45.5, y = 178.5, width = 15, height = 71, visible = false},
+        {x = 74, y = 223, width = 72, height = 18, visible = false},
+        {x = 4, y = 385, width = 20, height = 716, visible = false},
+        {x = 1011, y = 382.5, width = 20, height = 729, visible = false}
     },
     scrolls = {
         {x = 420, y = 380, width = 100, height = 100}
     },
     portals = {
-        {x = 880, y = 640, width = 100, height = 100, targetLevel = "level2"}
+        {x = 918, y = 650, width = 100, height = 100, targetLevel = "level2"}
     },
 }

@@ -75,7 +75,7 @@ end
 
 -- Function to create a static immovable box
 -- x, y are top-left coordinates (not center)
-local function createStaticBox(x, y, width, height)
+local function createStaticBox(x, y, width, height, visible)
 	local staticBox = {}
 		-- Convert top-left coordinates to center coordinates for physics body
 	local centerX = x + width / 2
@@ -88,6 +88,7 @@ local function createStaticBox(x, y, width, height)
 	staticBox.width = width
 	staticBox.height = height
 	staticBox.color = {0.6, 0.4, 0.2} -- Brown color for boxes
+	staticBox.visible = visible ~= false -- Default to true if not specified
 	
 	table.insert(staticBoxes, staticBox)
 	return staticBox
@@ -96,7 +97,7 @@ end
 -- Function to create a static immovable triangle with custom vertices
 -- x, y are the center coordinates of the triangle
 -- v1x, v1y, v2x, v2y, v3x, v3y are the three vertices relative to the center
-local function createStaticTriangle(x, y, v1x, v1y, v2x, v2y, v3x, v3y)
+local function createStaticTriangle(x, y, v1x, v1y, v2x, v2y, v3x, v3y, visible)
 	local staticTriangle = {}
 	staticTriangle.body = love.physics.newBody(world, x, y, "static")
 	
@@ -112,6 +113,7 @@ local function createStaticTriangle(x, y, v1x, v1y, v2x, v2y, v3x, v3y)
 	staticTriangle.fixture:setFriction(0)
 	staticTriangle.fixture:setRestitution(0)
 	staticTriangle.color = {0.2, 0.6, 0.4} -- Green color for triangles
+	staticTriangle.visible = visible ~= false -- Default to true if not specified
 	
 	table.insert(staticTriangles, staticTriangle)
 	return staticTriangle
@@ -230,7 +232,7 @@ local function loadLevel(filename)
 		for _, boxData in ipairs(levelData.boxes) do
 			local x = boxData.x - boxData.width / 2  -- Convert from center to top-left coordinates
 			local y = boxData.y - boxData.height / 2
-			createStaticBox(x, y, boxData.width, boxData.height)
+			createStaticBox(x, y, boxData.width, boxData.height, boxData.visible)
 		end
 	end
 	
@@ -239,7 +241,7 @@ local function loadLevel(filename)
 		for _, triData in ipairs(levelData.customTriangles) do
 			local x = triData.x
 			local y = triData.y
-			createStaticTriangle(x, y, triData.v1x, triData.v1y, triData.v2x, triData.v2y, triData.v3x, triData.v3y)
+			createStaticTriangle(x, y, triData.v1x, triData.v1y, triData.v2x, triData.v2y, triData.v3x, triData.v3y, triData.visible)
 		end
 	end
 	

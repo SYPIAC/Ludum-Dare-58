@@ -165,23 +165,26 @@ end
 function Render.drawStaticBoxes()
 	if staticBoxes then
 		for _, staticBox in ipairs(staticBoxes) do
-		local x, y = staticBox.body:getPosition()
-		local angle = staticBox.body:getAngle()
-		
-		love.graphics.push()
-		love.graphics.translate(x, y)
-		love.graphics.rotate(angle)
-		
-		-- Draw the box with its color
-		love.graphics.setColor(staticBox.color)
-		love.graphics.rectangle("fill", -staticBox.width/2, -staticBox.height/2, staticBox.width, staticBox.height)
-		
-		-- Draw a border
-		love.graphics.setColor(0.3, 0.2, 0.1)
-		love.graphics.setLineWidth(2)
-		love.graphics.rectangle("line", -staticBox.width/2, -staticBox.height/2, staticBox.width, staticBox.height)
-		
-		love.graphics.pop()
+			-- Only draw if visible
+			if staticBox.visible then
+				local x, y = staticBox.body:getPosition()
+				local angle = staticBox.body:getAngle()
+				
+				love.graphics.push()
+				love.graphics.translate(x, y)
+				love.graphics.rotate(angle)
+				
+				-- Draw the box with its color
+				love.graphics.setColor(staticBox.color)
+				love.graphics.rectangle("fill", -staticBox.width/2, -staticBox.height/2, staticBox.width, staticBox.height)
+				
+				-- Draw a border
+				love.graphics.setColor(0.3, 0.2, 0.1)
+				love.graphics.setLineWidth(2)
+				love.graphics.rectangle("line", -staticBox.width/2, -staticBox.height/2, staticBox.width, staticBox.height)
+				
+				love.graphics.pop()
+			end
 		end
 	end
 end
@@ -190,29 +193,32 @@ end
 function Render.drawStaticTriangles()
 	if staticTriangles then
 		for _, staticTriangle in ipairs(staticTriangles) do
-		local x, y = staticTriangle.body:getPosition()
-		local angle = staticTriangle.body:getAngle()
-		
-		love.graphics.push()
-		love.graphics.translate(x, y)
-		love.graphics.rotate(angle)
-		
-		-- Draw the triangle with its color
-		love.graphics.setColor(staticTriangle.color)
-		
-		-- Use the stored vertices
-		local v1 = staticTriangle.vertices[1]
-		local v2 = staticTriangle.vertices[2]
-		local v3 = staticTriangle.vertices[3]
-		
-		love.graphics.polygon("fill", v1[1], v1[2], v2[1], v2[2], v3[1], v3[2])
-		
-		-- Draw a border
-		love.graphics.setColor(0.1, 0.4, 0.2)
-		love.graphics.setLineWidth(2)
-		love.graphics.polygon("line", v1[1], v1[2], v2[1], v2[2], v3[1], v3[2])
-		
-		love.graphics.pop()
+			-- Only draw if visible
+			if staticTriangle.visible then
+				local x, y = staticTriangle.body:getPosition()
+				local angle = staticTriangle.body:getAngle()
+				
+				love.graphics.push()
+				love.graphics.translate(x, y)
+				love.graphics.rotate(angle)
+				
+				-- Draw the triangle with its color
+				love.graphics.setColor(staticTriangle.color)
+				
+				-- Use the stored vertices
+				local v1 = staticTriangle.vertices[1]
+				local v2 = staticTriangle.vertices[2]
+				local v3 = staticTriangle.vertices[3]
+				
+				love.graphics.polygon("fill", v1[1], v1[2], v2[1], v2[2], v3[1], v3[2])
+				
+				-- Draw a border
+				love.graphics.setColor(0.1, 0.4, 0.2)
+				love.graphics.setLineWidth(2)
+				love.graphics.polygon("line", v1[1], v1[2], v2[1], v2[2], v3[1], v3[2])
+				
+				love.graphics.pop()
+			end
 		end
 	end
 end

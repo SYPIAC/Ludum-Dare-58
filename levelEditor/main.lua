@@ -3,7 +3,7 @@
 
 -- Editor state
 local editorState = {
-    mode = "player", -- "player", "box", "scroll", "portal", "triangle"
+    mode = "player", -- "player", "box", "scroll", "portal", "triangle", "visibility"
     selectedObject = nil,
     isPlacing = false,
     gridSize = 20,
@@ -160,9 +160,23 @@ local function drawBoxes()
     if not levelData.boxes then return end
     
     for i, box in ipairs(levelData.boxes) do
-        love.graphics.setColor(colors.box)
+        -- Check if box is visible
+        local isVisible = box.visible ~= false -- Default to true if not specified
+        
+        if isVisible then
+            love.graphics.setColor(colors.box)
+        else
+            -- Draw invisible boxes with a different color and pattern
+            love.graphics.setColor(0.3, 0.3, 0.3, 0.5) -- Gray and semi-transparent
+        end
+        
         love.graphics.rectangle("fill", box.x, box.y, box.width, box.height)
-        love.graphics.setColor(0, 0, 0)
+        
+        if isVisible then
+            love.graphics.setColor(0, 0, 0)
+        else
+            love.graphics.setColor(0.5, 0.5, 0.5) -- Gray border for invisible
+        end
         love.graphics.setLineWidth(2)
         love.graphics.rectangle("line", box.x, box.y, box.width, box.height)
         
@@ -242,13 +256,27 @@ local function drawTriangles()
     if not levelData.customTriangles then return end
     
     for i, triangle in ipairs(levelData.customTriangles) do
-        love.graphics.setColor(colors.triangle)
+        -- Check if triangle is visible
+        local isVisible = triangle.visible ~= false -- Default to true if not specified
+        
+        if isVisible then
+            love.graphics.setColor(colors.triangle)
+        else
+            -- Draw invisible triangles with a different color and pattern
+            love.graphics.setColor(0.3, 0.3, 0.3, 0.5) -- Gray and semi-transparent
+        end
+        
         love.graphics.polygon("fill", 
             triangle.x + triangle.v1x, triangle.y + triangle.v1y,
             triangle.x + triangle.v2x, triangle.y + triangle.v2y,
             triangle.x + triangle.v3x, triangle.y + triangle.v3y
         )
-        love.graphics.setColor(0, 0, 0)
+        
+        if isVisible then
+            love.graphics.setColor(0, 0, 0)
+        else
+            love.graphics.setColor(0.5, 0.5, 0.5) -- Gray border for invisible
+        end
         love.graphics.setLineWidth(2)
         love.graphics.polygon("line",
             triangle.x + triangle.v1x, triangle.y + triangle.v1y,
@@ -323,6 +351,8 @@ local function drawUI()
     love.graphics.print("4 - Portal", 10, y)
     y = y + 15
     love.graphics.print("5 - Triangle", 10, y)
+    y = y + 15
+    love.graphics.print("6 - Visibility Toggle", 10, y)
     y = y + 20
     
     love.graphics.print("G - Toggle Grid", 10, y)
@@ -487,7 +517,7 @@ local function performSave(filename)
         for i, box in ipairs(levelData.boxes) do
             local centerX = box.x + box.width / 2
             local centerY = box.y + box.height / 2
-            levelString = levelString .. "        {x = " .. centerX .. ", y = " .. centerY .. ", width = " .. box.width .. ", height = " .. box.height .. "}"
+            levelString = levelString .. "        {x = " .. centerX .. ", y = " .. centerY .. ", width = " .. box.width .. ", height = " .. box.height .. ", visible = " .. tostring(box.visible ~= false) .. "}"
             if i < #levelData.boxes then
                 levelString = levelString .. ","
             end
@@ -526,7 +556,7 @@ local function performSave(filename)
     if #levelData.customTriangles > 0 then
         levelString = levelString .. "    customTriangles = {\n"
         for i, triangle in ipairs(levelData.customTriangles) do
-            levelString = levelString .. "        {x = " .. triangle.x .. ", y = " .. triangle.y .. ", v1x = " .. triangle.v1x .. ", v1y = " .. triangle.v1y .. ", v2x = " .. triangle.v2x .. ", v2y = " .. triangle.v2y .. ", v3x = " .. triangle.v3x .. ", v3y = " .. triangle.v3y .. "}"
+            levelString = levelString .. "        {x = " .. triangle.x .. ", y = " .. triangle.y .. ", v1x = " .. triangle.v1x .. ", v1y = " .. triangle.v1y .. ", v2x = " .. triangle.v2x .. ", v2y = " .. triangle.v2y .. ", v3x = " .. triangle.v3x .. ", v3y = " .. triangle.v3y .. ", visible = " .. tostring(triangle.visible ~= false) .. "}"
             if i < #levelData.customTriangles then
                 levelString = levelString .. ","
             end
@@ -583,6 +613,17 @@ local function performLoad(filename)
         for i, box in ipairs(levelData.boxes) do
             levelData.boxes[i].x = box.x - box.width / 2
             levelData.boxes[i].y = box.y - box.height / 2
+            -- Ensure visible flag exists (default to true if not specified)
+            if levelData.boxes[i].visible == nil then
+                levelData.boxes[i].visible = true
+            end
+        end
+        
+        -- Ensure visible flag exists for triangles (default to true if not specified)
+        for i, triangle in ipairs(levelData.customTriangles) do
+            if levelData.customTriangles[i].visible == nil then
+                levelData.customTriangles[i].visible = true
+            end
         end
         
         
@@ -1113,7 +1154,7 @@ function love.mousepressed(x, y, button)
                 if editorState.mode == "player" then
                     levelData.playerStart = {x = mx, y = my, width = 165, height = 165}
                 elseif editorState.mode == "box" then
-                    table.insert(levelData.boxes, {x = mx, y = my, width = 80, height = 60})
+                    table.insert(levelData.boxes, {x = mx, y = my, width = 80, height = 60, visible = true})
                 elseif editorState.mode == "scroll" then
                     table.insert(levelData.scrolls, {x = mx, y = my, width = 100, height = 100})
                 elseif editorState.mode == "portal" then
@@ -1123,8 +1164,21 @@ function love.mousepressed(x, y, button)
                         x = mx, y = my,
                         v1x = 0, v1y = -20,
                         v2x = -20, v2y = 20,
-                        v3x = 20, v3y = 20
+                        v3x = 20, v3y = 20,
+                        visible = true
                     })
+                elseif editorState.mode == "visibility" then
+                    -- Toggle visibility of clicked object
+                    local objType, objIndex = findObjectAt(mx, my)
+                    if objType == "box" and levelData.boxes[objIndex] then
+                        levelData.boxes[objIndex].visible = not (levelData.boxes[objIndex].visible ~= false)
+                        editorState.lastAction = "Box " .. objIndex .. " visibility: " .. (levelData.boxes[objIndex].visible and "ON" or "OFF")
+                        editorState.lastActionTime = love.timer.getTime()
+                    elseif objType == "triangle" and levelData.customTriangles[objIndex] then
+                        levelData.customTriangles[objIndex].visible = not (levelData.customTriangles[objIndex].visible ~= false)
+                        editorState.lastAction = "Triangle " .. objIndex .. " visibility: " .. (levelData.customTriangles[objIndex].visible and "ON" or "OFF")
+                        editorState.lastActionTime = love.timer.getTime()
+                    end
                 end
             end
         elseif button == 2 then -- Right click - delete
@@ -1190,6 +1244,8 @@ function love.keypressed(key)
             editorState.mode = "portal"
         elseif key == "5" then
             editorState.mode = "triangle"
+        elseif key == "6" then
+            editorState.mode = "visibility"
         elseif key == "g" then
             editorState.showGrid = not editorState.showGrid
         elseif key == "e" then
