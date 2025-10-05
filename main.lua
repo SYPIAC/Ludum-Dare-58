@@ -26,14 +26,14 @@ local spellImages = {} -- Dictionary to store loaded spell images
 local grimoireFont, spellTitleFont, spellDescFont
 
 local gravityPixelsPerSecond2 = 900 -- positive Y is down in LOVE
-local moveForce = 1000 -- force applied by A/D keys
+local moveForce = 2000 -- force applied by A/D keys
 local levitateForce = 5000 -- upward force applied by W key
 local linearDamping = 0.5
 local angularDamping = 0
 local playerWidth = 50
 local playerHeight = 75
 local isOnGround = false
-local groundCheckDistance = 100 -- pixels below box to check for ground
+local groundCheckDistance = 50 -- pixels below box to check for ground
 local raycastResult = nil
 
 local raycastCallback = function(fixture, x, y, xn, yn, fraction)
