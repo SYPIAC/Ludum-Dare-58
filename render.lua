@@ -230,16 +230,17 @@ function Render.drawScrolls()
 			love.graphics.push()
 			love.graphics.translate(scroll.x, scroll.y)
 			
-		-- Draw scroll image or fallback rectangle (always 100x100)
+		-- Draw scroll image or fallback rectangle using actual dimensions
 		love.graphics.setColor(1, 1, 1) -- No color tinting
 		if scrollImage then
-			-- Scale down to 100x100 (assuming original image is larger)
-			local scale = 100 / math.max(scrollImage:getWidth(), scrollImage:getHeight())
-			love.graphics.draw(scrollImage, 0, 0, 0, scale, scale, scrollImage:getWidth()/2, scrollImage:getHeight()/2)
+			-- Scale to match the scroll's width and height
+			local scaleX = scroll.width / scrollImage:getWidth()
+			local scaleY = scroll.height / scrollImage:getHeight()
+			love.graphics.draw(scrollImage, 0, 0, 0, scaleX, scaleY, scrollImage:getWidth()/2, scrollImage:getHeight()/2)
 		else
-			-- Fallback: draw a golden rectangle
+			-- Fallback: draw a golden rectangle with actual dimensions
 			love.graphics.setColor(0.8, 0.6, 0.2)
-			love.graphics.rectangle("fill", -50, -50, 100, 100)
+			love.graphics.rectangle("fill", -scroll.width/2, -scroll.height/2, scroll.width, scroll.height)
 		end
 			
 			love.graphics.pop()
@@ -254,11 +255,12 @@ function Render.drawPortals()
 			love.graphics.push()
 			love.graphics.translate(portal.x, portal.y)
 			
-		-- Draw portal image (always 100x100)
+		-- Draw portal image using actual dimensions
 		love.graphics.setColor(1, 1, 1) -- No color tinting
-		-- Scale down to 100x100 (assuming original image is larger)
-		local scale = 100 / math.max(portalImage:getWidth(), portalImage:getHeight())
-		love.graphics.draw(portalImage, 0, 0, 0, scale, scale, portalImage:getWidth()/2, portalImage:getHeight()/2)
+		-- Scale to match the portal's width and height
+		local scaleX = portal.width / portalImage:getWidth()
+		local scaleY = portal.height / portalImage:getHeight()
+		love.graphics.draw(portalImage, 0, 0, 0, scaleX, scaleY, portalImage:getWidth()/2, portalImage:getHeight()/2)
 		
 			
 			love.graphics.pop()
