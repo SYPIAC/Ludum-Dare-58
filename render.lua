@@ -8,6 +8,7 @@ local Render = {}
 local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, scrollImage, portalImage, spellbookImage, spellImages
 local font, grimoireFont, spellTitleFont, spellDescFont
 local isOnGround, grimoireOpen, currentPage, spells, activeSpellEffects, magicSchool, bookmarks
+local worldMapOpen, completedLevels, currentLevelName
 
 -- Function to set the global references
 function Render.setGlobals(globals)
@@ -36,6 +37,9 @@ function Render.setGlobals(globals)
 	activeSpellEffects = globals.activeSpellEffects
 	magicSchool = globals.magicSchool
 	bookmarks = globals.bookmarks
+	worldMapOpen = globals.worldMapOpen
+	completedLevels = globals.completedLevels
+	currentLevelName = globals.currentLevelName
 end
 
 -- Get spell image for a given spell name
@@ -452,12 +456,137 @@ function Render.drawGrimoire()
 	drawArrowButton(rightArrowX, arrowY, arrowSize, "right", {0.6, 0.3, 0.2}, false)
 end
 
+-- Draw the world map
+function Render.drawWorldMap()
+	if not worldMapOpen() then return end
+	
+	local screenW, screenH = love.graphics.getWidth(), love.graphics.getHeight()
+	local mapW = screenW * 0.6
+	local mapH = screenH * 0.4
+	local mapX = (screenW - mapW) / 2
+	local mapY = (screenH - mapH) / 2
+	
+	-- Draw dark overlay background
+	love.graphics.setColor(0, 0, 0, 0.7)
+	love.graphics.rectangle("fill", 0, 0, screenW, screenH)
+	
+	-- Draw world map background
+	love.graphics.setColor(0.1, 0.1, 0.2) -- Dark blue background
+	love.graphics.rectangle("fill", mapX, mapY, mapW, mapH, 8, 8)
+	
+	-- Draw world map border
+	love.graphics.setColor(0.3, 0.3, 0.5)
+	love.graphics.setLineWidth(3)
+	love.graphics.rectangle("line", mapX, mapY, mapW, mapH, 8, 8)
+	
+	-- Draw title
+	love.graphics.setFont(grimoireFont)
+	love.graphics.setColor(1, 1, 1)
+	local title = "Adventure World"
+	local titleW = grimoireFont:getWidth(title)
+	love.graphics.print(title, mapX + (mapW - titleW) / 2, mapY + 20)
+	
+	-- Level positions
+	local level1X = mapX + mapW * 0.2
+	local level1Y = mapY + mapH * 0.5
+	local level2X = mapX + mapW * 0.8
+	local level2Y = mapY + mapH * 0.5
+	local levelSize = 80
+	
+	-- Draw connecting line
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.setLineWidth(4)
+	love.graphics.line(level1X + levelSize/2, level1Y, level2X - levelSize/2, level2Y)
+	
+	-- Draw level 1 portal
+	love.graphics.push()
+	love.graphics.translate(level1X, level1Y)
+	
+	-- Draw portal image using actual portal graphic
+	love.graphics.setColor(1, 1, 1) -- No color tinting
+	if portalImage then
+		-- Scale to match the level size
+		local scaleX = levelSize / portalImage:getWidth()
+		local scaleY = levelSize / portalImage:getHeight()
+		love.graphics.draw(portalImage, 0, 0, 0, scaleX, scaleY, portalImage:getWidth()/2, portalImage:getHeight()/2)
+	else
+		-- Fallback: draw a simple circle
+		love.graphics.setColor(0.6, 0.2, 0.8) -- Purple color
+		love.graphics.circle("fill", 0, 0, levelSize/2)
+		love.graphics.setColor(0.8, 0.4, 1.0)
+		love.graphics.circle("line", 0, 0, levelSize/2)
+	end
+	
+	-- Draw level label
+	love.graphics.setFont(font)
+	love.graphics.setColor(1, 1, 1)
+	local label = "lvl 1"
+	local labelW = font:getWidth(label)
+	love.graphics.print(label, -labelW/2, -levelSize/2 - 30)
+	
+	-- Draw checkmark if completed
+	if completedLevels()["level1"] then
+		love.graphics.setColor(0, 1, 0) -- Green
+		love.graphics.setLineWidth(4)
+		local checkSize = 20
+		love.graphics.line(-checkSize/2, 0, -checkSize/4, checkSize/4)
+		love.graphics.line(-checkSize/4, checkSize/4, checkSize/2, -checkSize/4)
+	end
+	
+	love.graphics.pop()
+	
+	-- Draw level 2 portal
+	love.graphics.push()
+	love.graphics.translate(level2X, level2Y)
+	
+	-- Draw portal image using actual portal graphic
+	love.graphics.setColor(1, 1, 1) -- No color tinting
+	if portalImage then
+		-- Scale to match the level size
+		local scaleX = levelSize / portalImage:getWidth()
+		local scaleY = levelSize / portalImage:getHeight()
+		love.graphics.draw(portalImage, 0, 0, 0, scaleX, scaleY, portalImage:getWidth()/2, portalImage:getHeight()/2)
+	else
+		-- Fallback: draw a simple circle
+		love.graphics.setColor(0.6, 0.2, 0.8) -- Purple color
+		love.graphics.circle("fill", 0, 0, levelSize/2)
+		love.graphics.setColor(0.8, 0.4, 1.0)
+		love.graphics.circle("line", 0, 0, levelSize/2)
+	end
+	
+	-- Draw level label
+	love.graphics.setFont(font)
+	love.graphics.setColor(1, 1, 1)
+	local label = "lvl 2"
+	local labelW = font:getWidth(label)
+	love.graphics.print(label, -labelW/2, -levelSize/2 - 30)
+	
+	-- Draw checkmark if completed
+	if completedLevels()["level2"] then
+		love.graphics.setColor(0, 1, 0) -- Green
+		love.graphics.setLineWidth(4)
+		local checkSize = 20
+		love.graphics.line(-checkSize/2, 0, -checkSize/4, checkSize/4)
+		love.graphics.line(-checkSize/4, checkSize/4, checkSize/2, -checkSize/4)
+	end
+	
+	love.graphics.pop()
+	
+	-- Draw instructions
+	love.graphics.setFont(font)
+	love.graphics.setColor(1, 1, 1, 0.8)
+	love.graphics.print("Click on levels to navigate\nPress P to close", mapX + 10, mapY + mapH - 40)
+end
+
 -- Draw UI text
 function Render.drawUI()
-	if not grimoireOpen() then
+	if worldMapOpen() then
+		-- Don't show UI text when world map is open
+		return
+	elseif not grimoireOpen() then
 		love.graphics.setFont(font)
 		love.graphics.setColor(1, 1, 1, 0.85)
-		local info = string.format("WASD to move and levitate\nA/D - Move left/right\nW - Levitate (when near ground)\nPress R to reset position\nPress G to open grimoire")
+		local info = string.format("WASD to move and levitate\nA/D - Move left/right\nW - Levitate (when near ground)\nPress R to reset position\nPress G to open grimoire\nPress P to open world map")
 		love.graphics.print(info, 12, 12)
 	else
 		-- Show grimoire instructions
@@ -489,6 +618,9 @@ function Render.draw()
 	
 	-- Draw grimoire if open
 	Render.drawGrimoire()
+	
+	-- Draw world map if open
+	Render.drawWorldMap()
 	
 	-- Draw UI
 	Render.drawUI()

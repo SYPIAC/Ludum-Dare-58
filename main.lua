@@ -13,6 +13,10 @@ local staticTriangles = {} -- Array to store static triangles
 local scrolls = {} -- Array to store scrolls
 local portals = {} -- Array to store portals
 local currentLevel = nil -- Current level data
+local currentLevelName = "level1" -- Track current level name
+local worldMapOpen = false -- World map overlay state
+local completedLevels = {} -- Track which levels have been completed (scroll collected)
+local portalCooldown = 0 -- Cooldown to prevent spam when touching portals
 local font
 local wizardImage
 local wizardCastingImage
@@ -191,6 +195,7 @@ local function loadLevel(filename)
 	end
 	
 	currentLevel = levelData
+	currentLevelName = filename:gsub("%.dat$", "") -- Extract level name from filename
 	local w, h = love.graphics.getWidth(), love.graphics.getHeight()
 	
 	-- Load player start position if specified
@@ -304,10 +309,31 @@ local function loadLevel(filename)
 		spells = function() return Spellbook.getSpells() end,
 		activeSpellEffects = function() return Spellbook.getActiveSpellEffects() end,
 		magicSchool = function() return Spellbook.getMagicSchool() end,
-		bookmarks = function() return Spellbook.getBookmarks() end
+		bookmarks = function() return Spellbook.getBookmarks() end,
+		worldMapOpen = function() return worldMapOpen end,
+		completedLevels = function() return completedLevels end,
+		currentLevelName = function() return currentLevelName end
 	})
 	
 	return true
+end
+
+-- Function to navigate to a specific level
+local function navigateToLevel(levelName)
+	if levelName == currentLevelName then
+		worldMapOpen = false
+		portalCooldown = 0 -- Reset cooldown when closing world map
+		return
+	end
+	
+	local filename = levelName .. ".dat"
+	if loadLevel(filename) then
+		worldMapOpen = false
+		portalCooldown = 0 -- Reset cooldown when navigating to new level
+		print("Navigated to: " .. levelName)
+	else
+		print("Failed to load level: " .. levelName)
+	end
 end
 
 
@@ -382,7 +408,7 @@ function love.load()
 	walls.rebuild(w, h)
 	
 	-- Load level from file
-	loadLevel("level2.dat")
+	loadLevel("level1.dat")
 	
 	-- Set up render module with global references AFTER loading level
 	Render.setGlobals({
@@ -410,7 +436,10 @@ function love.load()
 		spells = function() return Spellbook.getSpells() end,
 		activeSpellEffects = function() return Spellbook.getActiveSpellEffects() end,
 		magicSchool = function() return Spellbook.getMagicSchool() end,
-		bookmarks = function() return Spellbook.getBookmarks() end
+		bookmarks = function() return Spellbook.getBookmarks() end,
+		worldMapOpen = function() return worldMapOpen end,
+		completedLevels = function() return completedLevels end,
+		currentLevelName = function() return currentLevelName end
 	})
 end
 
@@ -473,10 +502,53 @@ local function applyMovementForces()
 	end
 end
 
+-- Function to check collision between player and scrolls/portals
+local function checkPlayerCollisions()
+	local px, py = player.body:getPosition()
+	local playerHalfWidth = playerWidth / 2
+	local playerHalfHeight = playerHeight / 2
+	
+	-- Update portal cooldown
+	if portalCooldown > 0 then
+		portalCooldown = portalCooldown - 1
+	end
+	
+	-- Check scroll collisions
+	for i, scroll in ipairs(scrolls) do
+		local dx = math.abs(px - scroll.x)
+		local dy = math.abs(py - scroll.y)
+		
+		if dx < (playerHalfWidth + scroll.width/2) and dy < (playerHalfHeight + scroll.height/2) then
+			-- Player collected scroll
+			table.remove(scrolls, i)
+			completedLevels[currentLevelName] = true
+			print("Scroll collected! Level " .. currentLevelName .. " completed!")
+			break
+		end
+	end
+	
+	-- Check portal collisions (only if cooldown is 0 and world map is not already open)
+	if portalCooldown == 0 and not worldMapOpen then
+		for _, portal in ipairs(portals) do
+			local dx = math.abs(px - portal.x)
+			local dy = math.abs(py - portal.y)
+			
+			if dx < (playerHalfWidth + portal.width/2) and dy < (playerHalfHeight + portal.height/2) then
+				-- Player touched portal - open world map
+				worldMapOpen = true
+				portalCooldown = 60 -- 1 second cooldown at 60 FPS
+				print("Portal touched! Opening world map...")
+				break
+			end
+		end
+	end
+end
+
 function love.update(dt)
 	world:update(dt)
 	checkGroundContact()
 	applyMovementForces()
+	checkPlayerCollisions()
 end
 
 function love.draw()
@@ -491,6 +563,12 @@ function love.keypressed(key)
 		player.body:setAngle(0)
 	elseif key == "g" then
 		Spellbook.toggleGrimoire()
+	elseif key == "p" then
+		worldMapOpen = not worldMapOpen
+		if not worldMapOpen then
+			portalCooldown = 0 -- Reset cooldown when closing world map
+		end
+		print("World map toggled: " .. tostring(worldMapOpen))
 	end
 end
 
@@ -520,17 +598,57 @@ local function isMouseOverSpell(spellIndex)
 	return mx >= spellX and mx <= spellX + spellW and my >= spellY and my <= spellY + spellH
 end
 
+-- Check if mouse is over a level in the world map
+local function isMouseOverLevel(levelName, mx, my)
+	if not worldMapOpen then return false end
+	
+	local screenW, screenH = love.graphics.getWidth(), love.graphics.getHeight()
+	local mapW = screenW * 0.6
+	local mapH = screenH * 0.4
+	local mapX = (screenW - mapW) / 2
+	local mapY = (screenH - mapH) / 2
+	
+	-- Level 1 position (left side)
+	if levelName == "level1" then
+		local levelX = mapX + mapW * 0.2
+		local levelY = mapY + mapH * 0.5
+		local levelSize = 80
+		return mx >= levelX - levelSize/2 and mx <= levelX + levelSize/2 and 
+		       my >= levelY - levelSize/2 and my <= levelY + levelSize/2
+	end
+	
+	-- Level 2 position (right side)
+	if levelName == "level2" then
+		local levelX = mapX + mapW * 0.8
+		local levelY = mapY + mapH * 0.5
+		local levelSize = 80
+		return mx >= levelX - levelSize/2 and mx <= levelX + levelSize/2 and 
+		       my >= levelY - levelSize/2 and my <= levelY + levelSize/2
+	end
+	
+	return false
+end
+
 function love.mousepressed(x, y, button)
-	if button == 1 and Spellbook.isGrimoireOpen() then -- Left mouse button and grimoire is open
-		-- Check if clicking on any spell
-		for i = 1, 4 do
-			if isMouseOverSpell(i) then
-				local spells = Spellbook.getSpells()
-				local spell = spells[i]
-				if Spellbook.canCastSpell(spell.name) then
-					Spellbook.castSpell(spell.name)
+	if button == 1 then -- Left mouse button
+		if Spellbook.isGrimoireOpen() then
+			-- Check if clicking on any spell
+			for i = 1, 4 do
+				if isMouseOverSpell(i) then
+					local spells = Spellbook.getSpells()
+					local spell = spells[i]
+					if Spellbook.canCastSpell(spell.name) then
+						Spellbook.castSpell(spell.name)
+					end
+					break
 				end
-				break
+			end
+		elseif worldMapOpen then
+			-- Check if clicking on levels in world map
+			if isMouseOverLevel("level1", x, y) then
+				navigateToLevel("level1")
+			elseif isMouseOverLevel("level2", x, y) then
+				navigateToLevel("level2")
 			end
 		end
 	end
