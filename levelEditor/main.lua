@@ -8,6 +8,7 @@ local editorState = {
     isPlacing = false,
     gridSize = 20,
     showGrid = true,
+    showHelp = true, -- New: toggle help display
     lastAction = "",
     lastActionTime = 0,
     editMode = false, -- New: edit mode for resizing/moving objects
@@ -331,60 +332,105 @@ local function drawUI()
     love.graphics.setFont(font)
     love.graphics.setColor(1, 1, 1)
     
-    local y = 10
-    love.graphics.print("LEVEL EDITOR", 10, y)
-    y = y + 25
-    
-    love.graphics.print("Mode: " .. editorState.mode, 10, y)
-    y = y + 15
-    love.graphics.print("Edit Mode: " .. (editorState.editMode and "ON" or "OFF"), 10, y)
-    y = y + 20
-    
-    love.graphics.print("Controls:", 10, y)
-    y = y + 20
-    love.graphics.print("1 - Player Start", 10, y)
-    y = y + 15
-    love.graphics.print("2 - Box", 10, y)
-    y = y + 15
-    love.graphics.print("3 - Scroll", 10, y)
-    y = y + 15
-    love.graphics.print("4 - Portal", 10, y)
-    y = y + 15
-    love.graphics.print("5 - Triangle", 10, y)
-    y = y + 15
-    love.graphics.print("6 - Visibility Toggle", 10, y)
-    y = y + 20
-    
-    love.graphics.print("G - Toggle Grid", 10, y)
-    y = y + 15
-    love.graphics.print("E - Toggle Edit Mode", 10, y)
-    y = y + 15
-    love.graphics.print("S - Save Level", 10, y)
-    y = y + 15
-    love.graphics.print("L - Load Level", 10, y)
-    y = y + 15
-    love.graphics.print("C - Clear Level", 10, y)
-    y = y + 15
-    love.graphics.print("ESC - Exit", 10, y)
-    y = y + 20
-    
-    love.graphics.print("Click to place objects", 10, y)
-    y = y + 15
-    love.graphics.print("Right-click to delete", 10, y)
-    y = y + 20
-    
-    -- Show current level data
-    love.graphics.print("Current Level Data:", 10, y)
-    y = y + 15
-    love.graphics.print("Player: " .. (levelData.playerStart and "YES" or "NO"), 10, y)
-    y = y + 15
-    love.graphics.print("Boxes: " .. (levelData.boxes and #levelData.boxes or 0), 10, y)
-    y = y + 15
-    love.graphics.print("Scrolls: " .. (levelData.scrolls and #levelData.scrolls or 0), 10, y)
-    y = y + 15
-    love.graphics.print("Portals: " .. (levelData.portals and #levelData.portals or 0), 10, y)
-    y = y + 15
-    love.graphics.print("Triangles: " .. (levelData.customTriangles and #levelData.customTriangles or 0), 10, y)
+    -- Only show UI elements if help is enabled
+    if editorState.showHelp then
+        local y = 10
+        love.graphics.print("LEVEL EDITOR", 10, y)
+        y = y + 25
+        
+        love.graphics.print("Mode: " .. editorState.mode, 10, y)
+        y = y + 15
+        love.graphics.print("Edit Mode: " .. (editorState.editMode and "ON" or "OFF"), 10, y)
+        y = y + 20
+        
+        -- Draw help toggle button
+        local buttonX = 10
+        local buttonY = y
+        local buttonW = 120
+        local buttonH = 25
+        
+        -- Button background
+        love.graphics.setColor(0.2, 0.4, 0.6)
+        love.graphics.rectangle("fill", buttonX, buttonY, buttonW, buttonH)
+        love.graphics.setColor(0.8, 0.8, 0.8)
+        love.graphics.setLineWidth(2)
+        love.graphics.rectangle("line", buttonX, buttonY, buttonW, buttonH)
+        
+        -- Button text
+        love.graphics.setColor(1, 1, 1)
+        local buttonText = "H - Hide Help"
+        local textW = font:getWidth(buttonText)
+        local textH = font:getHeight()
+        love.graphics.print(buttonText, buttonX + (buttonW - textW) / 2, buttonY + (buttonH - textH) / 2)
+        
+        y = y + 35
+        
+        love.graphics.print("Controls:", 10, y)
+        y = y + 20
+        love.graphics.print("1 - Player Start", 10, y)
+        y = y + 15
+        love.graphics.print("2 - Box", 10, y)
+        y = y + 15
+        love.graphics.print("3 - Scroll", 10, y)
+        y = y + 15
+        love.graphics.print("4 - Portal", 10, y)
+        y = y + 15
+        love.graphics.print("5 - Triangle", 10, y)
+        y = y + 15
+        love.graphics.print("6 - Visibility Toggle", 10, y)
+        y = y + 20
+        
+        love.graphics.print("G - Toggle Grid", 10, y)
+        y = y + 15
+        love.graphics.print("E - Toggle Edit Mode", 10, y)
+        y = y + 15
+        love.graphics.print("S - Save Level", 10, y)
+        y = y + 15
+        love.graphics.print("L - Load Level", 10, y)
+        y = y + 15
+        love.graphics.print("C - Clear Level", 10, y)
+        y = y + 15
+        love.graphics.print("ESC - Exit", 10, y)
+        y = y + 20
+        
+        love.graphics.print("Click to place objects", 10, y)
+        y = y + 15
+        love.graphics.print("Right-click to delete", 10, y)
+        y = y + 20
+        
+        -- Show current level data
+        love.graphics.print("Current Level Data:", 10, y)
+        y = y + 15
+        love.graphics.print("Player: " .. (levelData.playerStart and "YES" or "NO"), 10, y)
+        y = y + 15
+        love.graphics.print("Boxes: " .. (levelData.boxes and #levelData.boxes or 0), 10, y)
+        y = y + 15
+        love.graphics.print("Scrolls: " .. (levelData.scrolls and #levelData.scrolls or 0), 10, y)
+        y = y + 15
+        love.graphics.print("Portals: " .. (levelData.portals and #levelData.portals or 0), 10, y)
+        y = y + 15
+        love.graphics.print("Triangles: " .. (levelData.customTriangles and #levelData.customTriangles or 0), 10, y)
+    else
+        -- When help is hidden, only show a small toggle button in the corner
+        local buttonX = 10
+        local buttonY = 10
+        local buttonW = 100
+        local buttonH = 20
+        
+        -- Button background
+        love.graphics.setColor(0.2, 0.4, 0.6)
+        love.graphics.rectangle("fill", buttonX, buttonY, buttonW, buttonH)
+        love.graphics.setColor(0.8, 0.8, 0.8)
+        love.graphics.setLineWidth(1)
+        love.graphics.rectangle("line", buttonX, buttonY, buttonW, buttonH)
+        
+        -- Button text
+        love.graphics.setColor(1, 1, 1)
+        local buttonText = "H - Show Help"
+        local textW = font:getWidth(buttonText)
+        local textH = font:getHeight()
+        love.graphics.print(buttonText, buttonX + (buttonW - textW) / 2, buttonY + (buttonH - textH) / 2)
+    end
     
     -- Show file dialog if active
     if editorState.fileDialog.active then
@@ -1074,6 +1120,17 @@ function love.mousepressed(x, y, button)
     else
         local mx, my = getMousePosition()
         
+        -- Check if clicking on help toggle button
+        local buttonX = 10
+        local buttonY = editorState.showHelp and (10 + 25 + 15 + 20) or 10 -- Position depends on help state
+        local buttonW = editorState.showHelp and 120 or 100
+        local buttonH = editorState.showHelp and 25 or 20
+        
+        if button == 1 and mx >= buttonX and mx <= buttonX + buttonW and my >= buttonY and my <= buttonY + buttonH then
+            editorState.showHelp = not editorState.showHelp
+            return
+        end
+        
         if button == 1 then -- Left click
             if editorState.editMode then
                 -- Check for player handles first
@@ -1248,6 +1305,8 @@ function love.keypressed(key)
             editorState.mode = "visibility"
         elseif key == "g" then
             editorState.showGrid = not editorState.showGrid
+        elseif key == "h" then
+            editorState.showHelp = not editorState.showHelp
         elseif key == "e" then
             editorState.editMode = not editorState.editMode
             editorState.dragging = false
