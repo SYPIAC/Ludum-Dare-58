@@ -25,5 +25,5 @@ return {
         {x = 687, y = 246, v1x = 5, v1y = -76, v2x = -20, v2y = 20, v3x = 20, v3y = 20, visible = true},
         {x = 330, y = 271, v1x = -3, v1y = -99, v2x = -20, v2y = 20, v3x = 20, v3y = 20, visible = true}
     },
-    backgroundImage = "gfx/background3.jpg"
+    backgroundImage = "gfx/background7.jpg"
 }
