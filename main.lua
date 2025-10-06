@@ -17,15 +17,55 @@ local currentLevelName = "level1" -- Track current level name
 local worldMapOpen = false -- World map overlay state
 local completedLevels = {} -- Track which levels have been completed (scroll collected)
 local portalCooldown = 0 -- Cooldown to prevent spam when touching portals
+
+-- Levels configuration - easy to expand by adding new entries
+local levelsConfig = {
+	{
+		id = "level1",
+		name = "Home Sweet Home",
+		displayName = "lvl 1",
+		filename = "level1.dat",
+		position = {x = 0.2, y = 0.5}, -- Relative position on world map (0-1)
+		unlocked = true -- Always unlocked
+	},
+	{
+		id = "level2", 
+		name = "Balcony",
+		displayName = "lvl 2",
+		filename = "level2.dat",
+		position = {x = 0.8, y = 0.5}, -- Relative position on world map (0-1)
+		unlocked = true -- Unlocked by completing level1
+	},
+	{
+		id = "level_end",
+		name = "Game Complete", 
+		displayName = "Complete!",
+		filename = "level_end.dat",
+		position = {x = 0.5, y = 0.8},
+		unlocked = true
+	}
+	-- Add new levels here easily:
+	-- {
+	--     id = "level4",
+	--     name = "Sky Palace", 
+	--     displayName = "lvl 4",
+	--     filename = "level4.dat",
+	--     position = {x = 0.5, y = 0.8},
+	--     unlocked = false -- Will be unlocked when level3 is completed
+	-- }
+}
 local font
 local wizardImage
 local wizardCastingImage
 local wizardGreenImage
 local wizardGreenCastingImage
 local backgroundImage
+local foregroundImages = {} -- Array to store foreground images with suffixes
 local scrollImage
 local portalImage
 local spellbookImage
+local buttonLeftImage
+local buttonRightImage
 local spellImages = {} -- Dictionary to store loaded spell images
 local grimoireFont, spellTitleFont, spellDescFont
 
@@ -74,6 +114,34 @@ local function loadSpellImages()
 			print("Failed to load spell image: " .. imagePath)
 		end
 	end
+end
+
+-- Function to load foreground images with suffixes
+local function loadForegroundImages(baseImagePath)
+	foregroundImages = {}
+	
+	-- Extract the base path without extension
+	local basePath = baseImagePath:gsub("%.png$", ""):gsub("%.jpg$", ""):gsub("%.jpeg$", "")
+	
+	-- Try to load images with suffixes _1, _2, _3, etc.
+	local suffix = 1
+	while true do
+		local foregroundPath = basePath .. "_" .. suffix .. ".png"
+		local success, image = pcall(function()
+			return love.graphics.newImage(foregroundPath)
+		end)
+		
+		if success then
+			table.insert(foregroundImages, image)
+			print("Loaded foreground image: " .. foregroundPath)
+			suffix = suffix + 1
+		else
+			-- No more images with this suffix, stop loading
+			break
+		end
+	end
+	
+	print("Loaded " .. #foregroundImages .. " foreground images for " .. baseImagePath)
 end
 
 
@@ -276,6 +344,8 @@ local function loadLevel(filename)
 		if success then
 			backgroundImage = img
 			print("Loaded background: " .. levelData.backgroundImage)
+			-- Load foreground images with suffixes
+			loadForegroundImages(levelData.backgroundImage)
 		else
 			print("Failed to load background: " .. levelData.backgroundImage)
 		end
@@ -295,9 +365,12 @@ local function loadLevel(filename)
 		wizardGreenImage = wizardGreenImage,
 		wizardGreenCastingImage = wizardGreenCastingImage,
 		backgroundImage = backgroundImage,
+		foregroundImages = foregroundImages,
 		scrollImage = scrollImage,
 		portalImage = portalImage,
 		spellbookImage = spellbookImage,
+		buttonLeftImage = buttonLeftImage,
+		buttonRightImage = buttonRightImage,
 		spellImages = spellImages,
 		font = font,
 		grimoireFont = grimoireFont,
@@ -312,27 +385,71 @@ local function loadLevel(filename)
 		bookmarks = function() return Spellbook.getBookmarks() end,
 		worldMapOpen = function() return worldMapOpen end,
 		completedLevels = function() return completedLevels end,
-		currentLevelName = function() return currentLevelName end
+		currentLevelName = function() return currentLevelName end,
+		levelsConfig = function() return levelsConfig end,
+		isLevelUnlocked = isLevelUnlocked
 	})
 	
 	return true
 end
 
+-- Function to get level configuration by ID
+local function getLevelConfig(levelId)
+	for _, level in ipairs(levelsConfig) do
+		if level.id == levelId then
+			return level
+		end
+	end
+	return nil
+end
+
+-- Function to check if a level is unlocked
+local function isLevelUnlocked(levelId)
+	local level = getLevelConfig(levelId)
+	if not level then 
+		print("Warning: Level not found in config: " .. tostring(levelId))
+		return false 
+	end
+	return level.unlocked
+end
+
+-- Function to unlock the next level when current level is completed
+local function unlockNextLevel(completedLevelId)
+	for i, level in ipairs(levelsConfig) do
+		if level.id == completedLevelId and i < #levelsConfig then
+			-- Unlock the next level
+			levelsConfig[i + 1].unlocked = true
+			print("Unlocked: " .. levelsConfig[i + 1].name)
+			break
+		end
+	end
+end
+
 -- Function to navigate to a specific level
-local function navigateToLevel(levelName)
-	if levelName == currentLevelName then
+local function navigateToLevel(levelId)
+	if levelId == currentLevelName then
 		worldMapOpen = false
 		portalCooldown = 0 -- Reset cooldown when closing world map
 		return
 	end
 	
-	local filename = levelName .. ".dat"
-	if loadLevel(filename) then
+	local level = getLevelConfig(levelId)
+	if not level then
+		print("Level not found: " .. levelId)
+		return
+	end
+	
+	if not isLevelUnlocked(levelId) then
+		print("Level locked: " .. level.name)
+		return
+	end
+	
+	if loadLevel(level.filename) then
 		worldMapOpen = false
 		portalCooldown = 0 -- Reset cooldown when navigating to new level
-		print("Navigated to: " .. levelName)
+		print("Navigated to: " .. level.name)
 	else
-		print("Failed to load level: " .. levelName)
+		print("Failed to load level: " .. level.name)
 	end
 end
 
@@ -348,6 +465,8 @@ function love.load()
 	scrollImage = love.graphics.newImage("gfx/scroll.png")
 	portalImage = love.graphics.newImage("gfx/portal.png")
 	spellbookImage = love.graphics.newImage("gfx/spellbook.png")
+	buttonLeftImage = love.graphics.newImage("gfx/button_left.png")
+	buttonRightImage = love.graphics.newImage("gfx/button_right.png")
 	
 	-- Load all spell images dynamically
 	loadSpellImages()
@@ -422,9 +541,12 @@ function love.load()
 		wizardGreenImage = wizardGreenImage,
 		wizardGreenCastingImage = wizardGreenCastingImage,
 		backgroundImage = backgroundImage,
+		foregroundImages = foregroundImages,
 		scrollImage = scrollImage,
 		portalImage = portalImage,
 		spellbookImage = spellbookImage,
+		buttonLeftImage = buttonLeftImage,
+		buttonRightImage = buttonRightImage,
 		spellImages = spellImages,
 		font = font,
 		grimoireFont = grimoireFont,
@@ -439,7 +561,9 @@ function love.load()
 		bookmarks = function() return Spellbook.getBookmarks() end,
 		worldMapOpen = function() return worldMapOpen end,
 		completedLevels = function() return completedLevels end,
-		currentLevelName = function() return currentLevelName end
+		currentLevelName = function() return currentLevelName end,
+		levelsConfig = function() return levelsConfig end,
+		isLevelUnlocked = isLevelUnlocked
 	})
 end
 
@@ -534,6 +658,8 @@ local function checkPlayerCollisions()
 			local dy = math.abs(py - portal.y)
 			
 			if dx < (playerHalfWidth + portal.width/2) and dy < (playerHalfHeight + portal.height/2) then
+				-- Unlock the next level
+				unlockNextLevel(currentLevelName)
 				-- Player touched portal - open world map
 				worldMapOpen = true
 				portalCooldown = 60 -- 1 second cooldown at 60 FPS
@@ -599,8 +725,11 @@ local function isMouseOverSpell(spellIndex)
 end
 
 -- Check if mouse is over a level in the world map
-local function isMouseOverLevel(levelName, mx, my)
+local function isMouseOverLevel(levelId, mx, my)
 	if not worldMapOpen then return false end
+	
+	local level = getLevelConfig(levelId)
+	if not level then return false end
 	
 	local screenW, screenH = love.graphics.getWidth(), love.graphics.getHeight()
 	local mapW = screenW * 0.6
@@ -608,25 +737,13 @@ local function isMouseOverLevel(levelName, mx, my)
 	local mapX = (screenW - mapW) / 2
 	local mapY = (screenH - mapH) / 2
 	
-	-- Level 1 position (left side)
-	if levelName == "level1" then
-		local levelX = mapX + mapW * 0.2
-		local levelY = mapY + mapH * 0.5
-		local levelSize = 80
-		return mx >= levelX - levelSize/2 and mx <= levelX + levelSize/2 and 
-		       my >= levelY - levelSize/2 and my <= levelY + levelSize/2
-	end
+	-- Calculate level position based on configuration
+	local levelX = mapX + mapW * level.position.x
+	local levelY = mapY + mapH * level.position.y
+	local levelSize = 80
 	
-	-- Level 2 position (right side)
-	if levelName == "level2" then
-		local levelX = mapX + mapW * 0.8
-		local levelY = mapY + mapH * 0.5
-		local levelSize = 80
-		return mx >= levelX - levelSize/2 and mx <= levelX + levelSize/2 and 
-		       my >= levelY - levelSize/2 and my <= levelY + levelSize/2
-	end
-	
-	return false
+	return mx >= levelX - levelSize/2 and mx <= levelX + levelSize/2 and 
+	       my >= levelY - levelSize/2 and my <= levelY + levelSize/2
 end
 
 function love.mousepressed(x, y, button)
@@ -644,11 +761,12 @@ function love.mousepressed(x, y, button)
 				end
 			end
 		elseif worldMapOpen then
-			-- Check if clicking on levels in world map
-			if isMouseOverLevel("level1", x, y) then
-				navigateToLevel("level1")
-			elseif isMouseOverLevel("level2", x, y) then
-				navigateToLevel("level2")
+			-- Check if clicking on any level in world map
+			for _, level in ipairs(levelsConfig) do
+				if isMouseOverLevel(level.id, x, y) then
+					navigateToLevel(level.id)
+					break
+				end
 			end
 		end
 	end

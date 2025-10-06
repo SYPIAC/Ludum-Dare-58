@@ -5,10 +5,10 @@ local Spellbook = require("spellbook")
 local Render = {}
 
 -- Global variables that need to be exposed from main.lua
-local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, scrollImage, portalImage, spellbookImage, spellImages
+local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, foregroundImages, scrollImage, portalImage, spellbookImage, spellImages, buttonLeftImage, buttonRightImage
 local font, grimoireFont, spellTitleFont, spellDescFont
 local isOnGround, grimoireOpen, currentPage, spells, activeSpellEffects, magicSchool, bookmarks
-local worldMapOpen, completedLevels, currentLevelName
+local worldMapOpen, completedLevels, currentLevelName, levelsConfig, isLevelUnlocked
 
 -- Function to set the global references
 function Render.setGlobals(globals)
@@ -22,10 +22,13 @@ function Render.setGlobals(globals)
 	wizardGreenImage = globals.wizardGreenImage
 	wizardGreenCastingImage = globals.wizardGreenCastingImage
 	backgroundImage = globals.backgroundImage
+	foregroundImages = globals.foregroundImages
 	scrollImage = globals.scrollImage
 	portalImage = globals.portalImage
 	spellbookImage = globals.spellbookImage
 	spellImages = globals.spellImages
+	buttonLeftImage = globals.buttonLeftImage
+	buttonRightImage = globals.buttonRightImage
 	font = globals.font
 	grimoireFont = globals.grimoireFont
 	spellTitleFont = globals.spellTitleFont
@@ -40,6 +43,8 @@ function Render.setGlobals(globals)
 	worldMapOpen = globals.worldMapOpen
 	completedLevels = globals.completedLevels
 	currentLevelName = globals.currentLevelName
+	levelsConfig = globals.levelsConfig
+	isLevelUnlocked = globals.isLevelUnlocked
 end
 
 -- Get spell image for a given spell name
@@ -163,6 +168,25 @@ function Render.drawBackground()
 	
 	love.graphics.setColor(1, 1, 1) -- No color tinting
 	love.graphics.draw(backgroundImage, 0, 0, 0, scaleX, scaleY)
+end
+
+-- Draw foreground images (in front of the player)
+function Render.drawForeground()
+	if foregroundImages and #foregroundImages > 0 then
+		local screenW, screenH = love.graphics.getWidth(), love.graphics.getHeight()
+		
+		-- Draw each foreground image
+		for _, foregroundImage in ipairs(foregroundImages) do
+			local imgW, imgH = foregroundImage:getDimensions()
+			
+			-- Scale the foreground image to cover the entire screen
+			local scaleX = screenW / imgW
+			local scaleY = screenH / imgH
+			
+			love.graphics.setColor(1, 1, 1) -- No color tinting
+			love.graphics.draw(foregroundImage, 0, 0, 0, scaleX, scaleY)
+		end
+	end
 end
 
 -- Draw static boxes
@@ -443,17 +467,29 @@ function Render.drawGrimoire()
 		love.graphics.print(bookmark, bookmarkX + (bookmarkW - textW) / 2, bookmarkY + 8)
 	end
 	
-	-- Draw navigation arrows on the sides of the spellbook
-	local arrowSize = 50
-	local arrowY = pageY + (pageH - arrowSize) / 2  -- Center vertically with the spellbook
-	local leftArrowX = pageX - arrowSize  -- Left side of the spellbook
-	local rightArrowX = pageX + pageW  -- Right side of the spellbook
+	-- Draw navigation buttons on the sides of the spellbook
+	local buttonSize = 50
+	local buttonY = pageY + (pageH - buttonSize) / 2  -- Center vertically with the spellbook
+	local leftButtonX = pageX - buttonSize  -- Left side of the spellbook
+	local rightButtonX = pageX + pageW  -- Right side of the spellbook
 	
-	-- Left arrow (previous page)
-	drawArrowButton(leftArrowX, arrowY, arrowSize, "left", {0.6, 0.3, 0.2}, false)
+	-- Left button (previous page)
+	if buttonLeftImage then
+		love.graphics.setColor(1, 1, 1) -- No color tinting
+		love.graphics.draw(buttonLeftImage, leftButtonX, buttonY, 0, buttonSize / buttonLeftImage:getWidth(), buttonSize / buttonLeftImage:getHeight())
+	else
+		-- Fallback to old arrow drawing if image not loaded
+		drawArrowButton(leftButtonX, buttonY, buttonSize, "left", {0.6, 0.3, 0.2}, false)
+	end
 	
-	-- Right arrow (next page)
-	drawArrowButton(rightArrowX, arrowY, arrowSize, "right", {0.6, 0.3, 0.2}, false)
+	-- Right button (next page)
+	if buttonRightImage then
+		love.graphics.setColor(1, 1, 1) -- No color tinting
+		love.graphics.draw(buttonRightImage, rightButtonX, buttonY, 0, buttonSize / buttonRightImage:getWidth(), buttonSize / buttonRightImage:getHeight())
+	else
+		-- Fallback to old arrow drawing if image not loaded
+		drawArrowButton(rightButtonX, buttonY, buttonSize, "right", {0.6, 0.3, 0.2}, false)
+	end
 end
 
 -- Draw the world map
@@ -486,91 +522,83 @@ function Render.drawWorldMap()
 	local titleW = grimoireFont:getWidth(title)
 	love.graphics.print(title, mapX + (mapW - titleW) / 2, mapY + 20)
 	
-	-- Level positions
-	local level1X = mapX + mapW * 0.2
-	local level1Y = mapY + mapH * 0.5
-	local level2X = mapX + mapW * 0.8
-	local level2Y = mapY + mapH * 0.5
 	local levelSize = 80
+	local levels = levelsConfig()
 	
-	-- Draw connecting line
+	-- Draw connecting lines between unlocked levels
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.setLineWidth(4)
-	love.graphics.line(level1X + levelSize/2, level1Y, level2X - levelSize/2, level2Y)
-	
-	-- Draw level 1 portal
-	love.graphics.push()
-	love.graphics.translate(level1X, level1Y)
-	
-	-- Draw portal image using actual portal graphic
-	love.graphics.setColor(1, 1, 1) -- No color tinting
-	if portalImage then
-		-- Scale to match the level size
-		local scaleX = levelSize / portalImage:getWidth()
-		local scaleY = levelSize / portalImage:getHeight()
-		love.graphics.draw(portalImage, 0, 0, 0, scaleX, scaleY, portalImage:getWidth()/2, portalImage:getHeight()/2)
-	else
-		-- Fallback: draw a simple circle
-		love.graphics.setColor(0.6, 0.2, 0.8) -- Purple color
-		love.graphics.circle("fill", 0, 0, levelSize/2)
-		love.graphics.setColor(0.8, 0.4, 1.0)
-		love.graphics.circle("line", 0, 0, levelSize/2)
+	for i = 1, #levels - 1 do
+		if isLevelUnlocked and isLevelUnlocked(levels[i].id) and isLevelUnlocked(levels[i + 1].id) then
+			local level1X = mapX + mapW * levels[i].position.x
+			local level1Y = mapY + mapH * levels[i].position.y
+			local level2X = mapX + mapW * levels[i + 1].position.x
+			local level2Y = mapY + mapH * levels[i + 1].position.y
+			love.graphics.line(level1X + levelSize/2, level1Y, level2X - levelSize/2, level2Y)
+		end
 	end
 	
-	-- Draw level label
-	love.graphics.setFont(font)
-	love.graphics.setColor(1, 1, 1)
-	local label = "lvl 1"
-	local labelW = font:getWidth(label)
-	love.graphics.print(label, -labelW/2, -levelSize/2 - 30)
-	
-	-- Draw checkmark if completed
-	if completedLevels()["level1"] then
-		love.graphics.setColor(0, 1, 0) -- Green
-		love.graphics.setLineWidth(4)
-		local checkSize = 20
-		love.graphics.line(-checkSize/2, 0, -checkSize/4, checkSize/4)
-		love.graphics.line(-checkSize/4, checkSize/4, checkSize/2, -checkSize/4)
+	-- Draw all levels dynamically
+	for _, level in ipairs(levels) do
+		local levelX = mapX + mapW * level.position.x
+		local levelY = mapY + mapH * level.position.y
+		
+		love.graphics.push()
+		love.graphics.translate(levelX, levelY)
+		
+		-- Draw portal image or locked indicator
+		if isLevelUnlocked and isLevelUnlocked(level.id) then
+			-- Draw portal image using actual portal graphic
+			love.graphics.setColor(1, 1, 1) -- No color tinting
+			if portalImage then
+				-- Scale to match the level size
+				local scaleX = levelSize / portalImage:getWidth()
+				local scaleY = levelSize / portalImage:getHeight()
+				love.graphics.draw(portalImage, 0, 0, 0, scaleX, scaleY, portalImage:getWidth()/2, portalImage:getHeight()/2)
+			else
+				-- Fallback: draw a simple circle
+				love.graphics.setColor(0.6, 0.2, 0.8) -- Purple color
+				love.graphics.circle("fill", 0, 0, levelSize/2)
+				love.graphics.setColor(0.8, 0.4, 1.0)
+				love.graphics.circle("line", 0, 0, levelSize/2)
+			end
+		else
+			-- Draw locked level indicator
+			love.graphics.setColor(0.3, 0.3, 0.3) -- Gray color for locked
+			love.graphics.circle("fill", 0, 0, levelSize/2)
+			love.graphics.setColor(0.5, 0.5, 0.5)
+			love.graphics.circle("line", 0, 0, levelSize/2)
+			
+			-- Draw lock icon
+			love.graphics.setColor(0.7, 0.7, 0.7)
+			love.graphics.setLineWidth(3)
+			local lockSize = 15
+			love.graphics.rectangle("line", -lockSize/2, -lockSize/2, lockSize, lockSize)
+			love.graphics.arc("line", 0, -lockSize/2, lockSize/3, 0, math.pi)
+		end
+		
+		-- Draw level label
+		love.graphics.setFont(font)
+		if isLevelUnlocked and isLevelUnlocked(level.id) then
+			love.graphics.setColor(1, 1, 1)
+		else
+			love.graphics.setColor(0.6, 0.6, 0.6) -- Gray for locked levels
+		end
+		local label = level.displayName
+		local labelW = font:getWidth(label)
+		love.graphics.print(label, -labelW/2, -levelSize/2 - 30)
+		
+		-- Draw checkmark if completed
+		if completedLevels()[level.id] then
+			love.graphics.setColor(0, 1, 0) -- Green
+			love.graphics.setLineWidth(4)
+			local checkSize = 20
+			love.graphics.line(-checkSize/2, 0, -checkSize/4, checkSize/4)
+			love.graphics.line(-checkSize/4, checkSize/4, checkSize/2, -checkSize/4)
+		end
+		
+		love.graphics.pop()
 	end
-	
-	love.graphics.pop()
-	
-	-- Draw level 2 portal
-	love.graphics.push()
-	love.graphics.translate(level2X, level2Y)
-	
-	-- Draw portal image using actual portal graphic
-	love.graphics.setColor(1, 1, 1) -- No color tinting
-	if portalImage then
-		-- Scale to match the level size
-		local scaleX = levelSize / portalImage:getWidth()
-		local scaleY = levelSize / portalImage:getHeight()
-		love.graphics.draw(portalImage, 0, 0, 0, scaleX, scaleY, portalImage:getWidth()/2, portalImage:getHeight()/2)
-	else
-		-- Fallback: draw a simple circle
-		love.graphics.setColor(0.6, 0.2, 0.8) -- Purple color
-		love.graphics.circle("fill", 0, 0, levelSize/2)
-		love.graphics.setColor(0.8, 0.4, 1.0)
-		love.graphics.circle("line", 0, 0, levelSize/2)
-	end
-	
-	-- Draw level label
-	love.graphics.setFont(font)
-	love.graphics.setColor(1, 1, 1)
-	local label = "lvl 2"
-	local labelW = font:getWidth(label)
-	love.graphics.print(label, -labelW/2, -levelSize/2 - 30)
-	
-	-- Draw checkmark if completed
-	if completedLevels()["level2"] then
-		love.graphics.setColor(0, 1, 0) -- Green
-		love.graphics.setLineWidth(4)
-		local checkSize = 20
-		love.graphics.line(-checkSize/2, 0, -checkSize/4, checkSize/4)
-		love.graphics.line(-checkSize/4, checkSize/4, checkSize/2, -checkSize/4)
-	end
-	
-	love.graphics.pop()
 	
 	-- Draw instructions
 	love.graphics.setFont(font)
@@ -616,6 +644,9 @@ function Render.draw()
 	-- Draw wizard
 	Render.drawWizard()
 	
+	-- Draw foreground images (in front of wizard)
+	Render.drawForeground()
+	
 	-- Draw grimoire if open
 	Render.drawGrimoire()
 	
@@ -624,6 +655,122 @@ function Render.draw()
 	
 	-- Draw UI
 	Render.drawUI()
+	
+	-- Draw world text for special levels
+	Render.drawWorldText()
+end
+
+-- Function to draw world text for special levels
+function Render.drawWorldText()
+	local levelName = currentLevelName()
+	
+	-- Define special level text messages
+	local specialTexts = {
+		level_end = {
+			text = "YOU WIN!",
+			color = {1, 0.8, 0.2}, -- Golden yellow
+			fontSize = 48,
+			subTexts = {
+				{
+					text = "You collected all the spells. Wow!",
+					color = {0.9, 0.9, 0.9}, -- Light gray
+					fontSize = 24
+				},
+				{
+					text = "Have this one last special one.",
+					color = {0.9, 0.9, 0.9}, -- Light gray
+					fontSize = 24
+				}
+			}
+		}
+		-- Add more special levels here as needed
+		-- level_special = {
+		--     text = "Special Message",
+		--     color = {0.2, 0.8, 1}, -- Blue
+		--     fontSize = 36
+		-- }
+	}
+	
+	local specialLevel = specialTexts[levelName]
+	if specialLevel then
+		-- Get screen dimensions
+		local screenWidth = love.graphics.getWidth()
+		local screenHeight = love.graphics.getHeight()
+		
+		-- Draw main text
+		local mainFont = love.graphics.newFont(specialLevel.fontSize)
+		love.graphics.setFont(mainFont)
+		
+		-- Calculate text dimensions for background box
+		local mainTextWidth = mainFont:getWidth(specialLevel.text)
+		local mainTextHeight = mainFont:getHeight()
+		local boxPadding = 20
+		local boxWidth = mainTextWidth + (boxPadding * 2)
+		local boxHeight = mainTextHeight + (boxPadding * 2)
+		
+		-- Add subtext dimensions if they exist
+		if specialLevel.subTexts then
+			local subFont = love.graphics.newFont(specialLevel.subTexts[1].fontSize)
+			love.graphics.setFont(subFont)
+			local subTextWidth = 0
+			for _, subText in ipairs(specialLevel.subTexts) do
+				local subFont = love.graphics.newFont(subText.fontSize)
+				love.graphics.setFont(subFont)
+				local textWidth = subFont:getWidth(subText.text)
+				if textWidth > subTextWidth then
+					subTextWidth = textWidth
+				end
+			end
+			boxWidth = math.max(boxWidth, subTextWidth + (boxPadding * 2))
+			boxHeight = boxHeight + (specialLevel.subTexts[1].fontSize + 10) * #specialLevel.subTexts + 20
+		end
+		
+		-- Calculate the actual text area bounds
+		local textStartY = (screenHeight - mainTextHeight) / 2 - 40 + 200
+		local textEndY = textStartY + mainTextHeight
+		if specialLevel.subTexts then
+			textEndY = textEndY + 20 + (specialLevel.subTexts[1].fontSize + 10) * #specialLevel.subTexts
+		end
+		
+		-- Draw black background box centered on the text area
+		love.graphics.setColor(0, 0, 0, 0.7) -- Black with 70% opacity
+		love.graphics.rectangle("fill", 
+			(screenWidth - boxWidth) / 2, 
+			textStartY - boxPadding, 
+			boxWidth, 
+			textEndY - textStartY + (boxPadding * 2))
+		
+		-- Draw text
+		love.graphics.setFont(mainFont)
+		love.graphics.setColor(specialLevel.color[1], specialLevel.color[2], specialLevel.color[3])
+		
+		love.graphics.print(specialLevel.text, 
+			(screenWidth - mainTextWidth) / 2, 
+			(screenHeight - mainTextHeight) / 2 - 40 + 200) -- Offset up to make room for subtext, moved 200px lower
+		
+		-- Draw subtexts if they exist
+		if specialLevel.subTexts then
+			local yOffset = (screenHeight - mainTextHeight) / 2 + 20 + 200 -- Start below main text, moved 200px lower
+			
+			for i, subText in ipairs(specialLevel.subTexts) do
+				local subFont = love.graphics.newFont(subText.fontSize)
+				love.graphics.setFont(subFont)
+				love.graphics.setColor(subText.color[1], subText.color[2], subText.color[3])
+				
+				local subTextWidth = subFont:getWidth(subText.text)
+				local subTextHeight = subFont:getHeight()
+				
+				love.graphics.print(subText.text, 
+					(screenWidth - subTextWidth) / 2, 
+					yOffset)
+				
+				yOffset = yOffset + subTextHeight + 10 -- Add spacing between subtexts
+			end
+		end
+		
+		-- Reset color
+		love.graphics.setColor(1, 1, 1)
+	end
 end
 
 
