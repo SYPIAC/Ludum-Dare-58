@@ -394,35 +394,55 @@ function Render.drawGrimoire()
 			love.graphics.print(spell.image, imgX + (imgW - placeholderW) / 2, imgY + (imgH - placeholderH) / 2)
 		end
 		
-		-- Draw description
-		love.graphics.setFont(spellDescFont)
-		love.graphics.setColor(0.3, 0.2, 0.1)
+		-- Draw description or special image for "Become Green"
 		local descW = spellW - imgW - 30
 		local descX = imgX + imgW + 10
 		local descY = imgY + 5
 		
-		-- Word wrap description
-		local words = {}
-		for word in spell.description:gmatch("%S+") do
-			table.insert(words, word)
-		end
-		
-		local line = ""
-		local y = descY
-		for _, word in ipairs(words) do
-			local testLine = line == "" and word or line .. " " .. word
-			if spellDescFont:getWidth(testLine) <= descW then
-				line = testLine
+		if spell.name == "Become Green" then
+			-- Draw spellmeaning1.png for "Become Green" spell
+			local meaningImage = love.graphics.newImage("gfx/spellmeaning1.png")
+			if meaningImage then
+				love.graphics.setColor(1, 1, 1) -- No color tinting
+				local meaningW, meaningH = meaningImage:getDimensions()
+				local scale = math.min(descW / meaningW, (spellH - 40) / meaningH)
+				local scaledW = meaningW * scale
+				local scaledH = meaningH * scale
+				love.graphics.draw(meaningImage, descX + (descW - scaledW) / 2, descY + ((spellH - 40) - scaledH) / 2, 0, scale * 2, scale * 2)
 			else
-				if line ~= "" then
-					love.graphics.print(line, descX, y)
-					y = y + spellDescFont:getHeight() + 2
-				end
-				line = word
+				-- Fallback to text if image not found
+				love.graphics.setFont(spellDescFont)
+				love.graphics.setColor(0.3, 0.2, 0.1)
+				love.graphics.print(spell.description, descX, descY)
 			end
-		end
-		if line ~= "" then
-			love.graphics.print(line, descX, y)
+		else
+			-- Draw normal text description for other spells
+			love.graphics.setFont(spellDescFont)
+			love.graphics.setColor(0.3, 0.2, 0.1)
+			
+			-- Word wrap description
+			local words = {}
+			for word in spell.description:gmatch("%S+") do
+				table.insert(words, word)
+			end
+			
+			local line = ""
+			local y = descY
+			for _, word in ipairs(words) do
+				local testLine = line == "" and word or line .. " " .. word
+				if spellDescFont:getWidth(testLine) <= descW then
+					line = testLine
+				else
+					if line ~= "" then
+						love.graphics.print(line, descX, y)
+						y = y + spellDescFont:getHeight() + 2
+					end
+					line = word
+				end
+			end
+			if line ~= "" then
+				love.graphics.print(line, descX, y)
+			end
 		end
 	end
 	
@@ -495,6 +515,22 @@ end
 -- Draw the world map
 function Render.drawWorldMap()
 	if not worldMapOpen() then return end
+	
+	-- Safety check: ensure isLevelUnlocked function is available
+	if not isLevelUnlocked then
+		print("Warning: isLevelUnlocked function not available in render module")
+		-- Create a fallback function that checks the level config directly
+		isLevelUnlocked = function(levelId)
+			if not levelsConfig or not levelsConfig() then return false end
+			for _, level in ipairs(levelsConfig()) do
+				if level.id == levelId then
+					return level.unlocked
+				end
+			end
+			return false
+		end
+		print("Created fallback isLevelUnlocked function")
+	end
 	
 	local screenW, screenH = love.graphics.getWidth(), love.graphics.getHeight()
 	local mapW = screenW * 0.6
@@ -614,8 +650,10 @@ function Render.drawUI()
 	elseif not grimoireOpen() then
 		love.graphics.setFont(font)
 		love.graphics.setColor(1, 1, 1, 0.85)
-		local info = string.format("WASD to move and levitate\nA/D - Move left/right\nW - Levitate (when near ground)\nPress R to reset position\nPress G to open grimoire\nPress P to open world map")
-		love.graphics.print(info, 12, 12)
+		
+		-- Check if Levitation spell is active
+		local activeSpellEffects = activeSpellEffects()
+		local canMove = activeSpellEffects["Levitation"] == true
 	else
 		-- Show grimoire instructions
 		love.graphics.setFont(font)
@@ -670,6 +708,7 @@ function Render.drawWorldText()
 			text = "YOU WIN!",
 			color = {1, 0.8, 0.2}, -- Golden yellow
 			fontSize = 48,
+			position = {x = 0.5, y = 0.5, offsetY = 200}, -- Center with 200px offset down
 			subTexts = {
 				{
 					text = "You collected all the spells. Wow!",
@@ -682,20 +721,37 @@ function Render.drawWorldText()
 					fontSize = 24
 				}
 			}
+		},
+		level4 = {
+			text = "R to restart",
+			color = {0.2, 0.8, 1}, -- Blue
+			fontSize = 36,
+			position = {x = 0.5, y = 0.98} -- Bottom center
+		},
+		level1 = {
+			text = "I'm not walking anywhere. Are you mad? (Press G to open grimoire)",
+			color = {0.2, 0.8, 1}, -- Blue
+			fontSize = 16,
+			position = {x = 0.3, y = 0.1} -- Top left
 		}
+	}
 		-- Add more special levels here as needed
 		-- level_special = {
 		--     text = "Special Message",
 		--     color = {0.2, 0.8, 1}, -- Blue
 		--     fontSize = 36
 		-- }
-	}
 	
 	local specialLevel = specialTexts[levelName]
 	if specialLevel then
 		-- Get screen dimensions
 		local screenWidth = love.graphics.getWidth()
 		local screenHeight = love.graphics.getHeight()
+		
+		-- Calculate position based on custom position or default to center
+		local position = specialLevel.position or {x = 0.5, y = 0.5, offsetY = 0}
+		local baseX = screenWidth * position.x
+		local baseY = screenHeight * position.y + (position.offsetY or 0)
 		
 		-- Draw main text
 		local mainFont = love.graphics.newFont(specialLevel.fontSize)
@@ -726,7 +782,7 @@ function Render.drawWorldText()
 		end
 		
 		-- Calculate the actual text area bounds
-		local textStartY = (screenHeight - mainTextHeight) / 2 - 40 + 200
+		local textStartY = baseY - 40
 		local textEndY = textStartY + mainTextHeight
 		if specialLevel.subTexts then
 			textEndY = textEndY + 20 + (specialLevel.subTexts[1].fontSize + 10) * #specialLevel.subTexts
@@ -735,7 +791,7 @@ function Render.drawWorldText()
 		-- Draw black background box centered on the text area
 		love.graphics.setColor(0, 0, 0, 0.7) -- Black with 70% opacity
 		love.graphics.rectangle("fill", 
-			(screenWidth - boxWidth) / 2, 
+			baseX - boxWidth / 2, 
 			textStartY - boxPadding, 
 			boxWidth, 
 			textEndY - textStartY + (boxPadding * 2))
@@ -745,12 +801,12 @@ function Render.drawWorldText()
 		love.graphics.setColor(specialLevel.color[1], specialLevel.color[2], specialLevel.color[3])
 		
 		love.graphics.print(specialLevel.text, 
-			(screenWidth - mainTextWidth) / 2, 
-			(screenHeight - mainTextHeight) / 2 - 40 + 200) -- Offset up to make room for subtext, moved 200px lower
+			baseX - mainTextWidth / 2, 
+			textStartY)
 		
 		-- Draw subtexts if they exist
 		if specialLevel.subTexts then
-			local yOffset = (screenHeight - mainTextHeight) / 2 + 20 + 200 -- Start below main text, moved 200px lower
+			local yOffset = textStartY + mainTextHeight + 20
 			
 			for i, subText in ipairs(specialLevel.subTexts) do
 				local subFont = love.graphics.newFont(subText.fontSize)
@@ -761,7 +817,7 @@ function Render.drawWorldText()
 				local subTextHeight = subFont:getHeight()
 				
 				love.graphics.print(subText.text, 
-					(screenWidth - subTextWidth) / 2, 
+					baseX - subTextWidth / 2, 
 					yOffset)
 				
 				yOffset = yOffset + subTextHeight + 10 -- Add spacing between subtexts

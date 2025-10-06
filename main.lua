@@ -23,7 +23,7 @@ local levelsConfig = {
 	{
 		id = "level1",
 		name = "Home Sweet Home",
-		displayName = "lvl 1",
+		displayName = "Home",
 		filename = "level1.dat",
 		position = {x = 0.2, y = 0.5}, -- Relative position on world map (0-1)
 		unlocked = true -- Always unlocked
@@ -31,10 +31,18 @@ local levelsConfig = {
 	{
 		id = "level2", 
 		name = "Balcony",
-		displayName = "lvl 2",
+		displayName = "Balcony",
 		filename = "level2.dat",
-		position = {x = 0.8, y = 0.5}, -- Relative position on world map (0-1)
+		position = {x = 0.5, y = 0.5}, -- Relative position on world map (0-1)
 		unlocked = true -- Unlocked by completing level1
+	},
+	{
+		id = "level4",
+		name = "Forest",
+		displayName = "Forest",
+		filename = "level4.dat",
+		position = {x = 0.8, y = 0.5},
+		unlocked = true
 	},
 	{
 		id = "level_end",
@@ -600,28 +608,35 @@ local function applyMovementForces()
 	local vx, vy = player.body:getLinearVelocity()
 	local currentSpeed = math.abs(vx)
 	
-	-- Horizontal movement with A/D keys (with speed limiting)
-	if love.keyboard.isDown("a") or love.keyboard.isDown("left") then
-		-- Only apply force if we're not already at max speed in this direction
-		if vx > -maxHorizontalSpeed then
-			-- Reduce force as we approach max speed
-			local speedRatio = math.max(0, (maxHorizontalSpeed + vx) / maxHorizontalSpeed)
-			player.body:applyForce(-moveForce * speedRatio, 0)
-		end
-	end
-	if love.keyboard.isDown("d") or love.keyboard.isDown("right") then
-		-- Only apply force if we're not already at max speed in this direction
-		if vx < maxHorizontalSpeed then
-			-- Reduce force as we approach max speed
-			local speedRatio = math.max(0, (maxHorizontalSpeed - vx) / maxHorizontalSpeed)
-			player.body:applyForce(moveForce * speedRatio, 0)
-		end
-	end
+	-- Check if Levitation spell is active
+	local activeSpellEffects = Spellbook.getActiveSpellEffects()
+	local canMove = activeSpellEffects["Levitation"] == true
 	
-	-- Levitate with W key (only near ground)
-	if love.keyboard.isDown("w") or love.keyboard.isDown("up") then
-		if isOnGround then
-			player.body:applyForce(0, -levitateForce)
+	-- Only allow movement if Levitation spell is active
+	if canMove then
+		-- Horizontal movement with A/D keys (with speed limiting)
+		if love.keyboard.isDown("a") or love.keyboard.isDown("left") then
+			-- Only apply force if we're not already at max speed in this direction
+			if vx > -maxHorizontalSpeed then
+				-- Reduce force as we approach max speed
+				local speedRatio = math.max(0, (maxHorizontalSpeed + vx) / maxHorizontalSpeed)
+				player.body:applyForce(-moveForce * speedRatio, 0)
+			end
+		end
+		if love.keyboard.isDown("d") or love.keyboard.isDown("right") then
+			-- Only apply force if we're not already at max speed in this direction
+			if vx < maxHorizontalSpeed then
+				-- Reduce force as we approach max speed
+				local speedRatio = math.max(0, (maxHorizontalSpeed - vx) / maxHorizontalSpeed)
+				player.body:applyForce(moveForce * speedRatio, 0)
+			end
+		end
+		
+		-- Levitate with W key (only near ground)
+		if love.keyboard.isDown("w") or love.keyboard.isDown("up") then
+			if isOnGround then
+				player.body:applyForce(0, -levitateForce)
+			end
 		end
 	end
 end
@@ -756,6 +771,8 @@ function love.mousepressed(x, y, button)
 					local spell = spells[i]
 					if Spellbook.canCastSpell(spell.name) then
 						Spellbook.castSpell(spell.name)
+						-- Close the grimoire after casting a spell
+						Spellbook.toggleGrimoire()
 					end
 					break
 				end

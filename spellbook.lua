@@ -14,6 +14,9 @@ local spellEffects = {
 		normalImage = "wizardGreenImage",
 		castingImage = "wizardGreenCastingImage",
 		description = "You feel your skin tingling with magical energy as you turn a vibrant shade of green."
+	},
+	["Levitation"] = {
+		description = "You feel weightless as magical energy courses through your body, granting you the power of movement and levitation."
 	}
 	-- Future spells can be added here easily
 }
@@ -24,7 +27,7 @@ local spells = {
 		description = "Transform yourself into a vibrant green color, granting camouflage in forest environments.",
 		image = "icon_1.png"
 	},
-	[2] = { name = "???", description = "Hidden beneath the forest temple", image = "???" },
+	[2] = { name = "Levitation", description = "Any self-respecting wizard is above walking.", image = "icon_1.png" },
 	[3] = { name = "???", description = "Follow us on Twitter to unlock this spell", image = "???" },
 	[4] = { name = "???", description = "Available now for owners of 'Spell Collector: Season 1 Pass'", image = "???" }
 }
