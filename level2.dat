@@ -3,22 +3,22 @@
 
 return {
     playerStart = {
-        x = 366.25,
-        y = 309.75,
-        width = 35.5,
-        height = 38.5
+        x = 352.75,
+        y = 302.5,
+        width = 65,
+        height = 65
     },
     boxes = {
         {x = 304, y = 337.5, width = 210, height = 11, visible = false},
-        {x = 404.5, y = 321.5, width = 11, height = 5, visible = false},
+        {x = 404.5, y = 324.5, width = 11, height = 5, visible = false},
         {x = 511, y = 763.5, width = 1018, height = 65, visible = false},
         {x = 314.5, y = 556.5, width = 87, height = 23, visible = false}
     },
     scrolls = {
-        {x = 660, y = 540, width = 100, height = 100}
+        {x = 645, y = 537.5, width = 46, height = 49}
     },
     portals = {
-        {x = 980, y = 680, width = 100, height = 100, targetLevel = "level2"}
+        {x = 952.5, y = 675, width = 75, height = 74, targetLevel = "level2"}
     },
     customTriangles = {
         {x = 116, y = 380, v1x = 0, v1y = -20, v2x = -36, v2y = 42, v3x = 37, v3y = 44, visible = false},

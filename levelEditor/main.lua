@@ -158,6 +158,48 @@ local function drawBoxResizeHandles(box, boxIndex)
     love.graphics.rectangle("fill", box.x + box.width - halfHandle, box.y + box.height/2 - halfHandle, handleSize, handleSize)
 end
 
+-- Helper function to draw resize handles for scrolls
+local function drawScrollResizeHandles(scroll, scrollIndex)
+    local handleSize = 8
+    local halfHandle = handleSize / 2
+    
+    love.graphics.setColor(1, 1, 0) -- Yellow handles
+    love.graphics.setLineWidth(2)
+    
+    -- Corner handles
+    love.graphics.rectangle("fill", scroll.x - scroll.width/2 - halfHandle, scroll.y - scroll.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", scroll.x + scroll.width/2 - halfHandle, scroll.y - scroll.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", scroll.x - scroll.width/2 - halfHandle, scroll.y + scroll.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", scroll.x + scroll.width/2 - halfHandle, scroll.y + scroll.height/2 - halfHandle, handleSize, handleSize)
+    
+    -- Edge handles
+    love.graphics.rectangle("fill", scroll.x - halfHandle, scroll.y - scroll.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", scroll.x - halfHandle, scroll.y + scroll.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", scroll.x - scroll.width/2 - halfHandle, scroll.y - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", scroll.x + scroll.width/2 - halfHandle, scroll.y - halfHandle, handleSize, handleSize)
+end
+
+-- Helper function to draw resize handles for portals
+local function drawPortalResizeHandles(portal, portalIndex)
+    local handleSize = 8
+    local halfHandle = handleSize / 2
+    
+    love.graphics.setColor(1, 1, 0) -- Yellow handles
+    love.graphics.setLineWidth(2)
+    
+    -- Corner handles
+    love.graphics.rectangle("fill", portal.x - portal.width/2 - halfHandle, portal.y - portal.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", portal.x + portal.width/2 - halfHandle, portal.y - portal.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", portal.x - portal.width/2 - halfHandle, portal.y + portal.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", portal.x + portal.width/2 - halfHandle, portal.y + portal.height/2 - halfHandle, handleSize, handleSize)
+    
+    -- Edge handles
+    love.graphics.rectangle("fill", portal.x - halfHandle, portal.y - portal.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", portal.x - halfHandle, portal.y + portal.height/2 - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", portal.x - portal.width/2 - halfHandle, portal.y - halfHandle, handleSize, handleSize)
+    love.graphics.rectangle("fill", portal.x + portal.width/2 - halfHandle, portal.y - halfHandle, handleSize, handleSize)
+end
+
 -- Helper function to draw boxes
 local function drawBoxes()
     if not levelData.boxes then return end
@@ -213,6 +255,11 @@ local function drawScrolls()
         local textW = font:getWidth(text)
         local textH = font:getHeight()
         love.graphics.print(text, scroll.x - textW/2, scroll.y - textH/2)
+        
+        -- Draw resize handles in edit mode
+        if editorState.editMode then
+            drawScrollResizeHandles(scroll, i)
+        end
     end
 end
 
@@ -234,6 +281,11 @@ local function drawPortals()
         local textW = font:getWidth(text)
         local textH = font:getHeight()
         love.graphics.print(text, portal.x - textW/2, portal.y - textH/2)
+        
+        -- Draw resize handles in edit mode
+        if editorState.editMode then
+            drawPortalResizeHandles(portal, i)
+        end
     end
 end
 
@@ -822,6 +874,64 @@ local function findBoxHandle(x, y)
     return nil, nil, nil
 end
 
+-- Helper function to find which scroll handle is clicked
+local function findScrollHandle(x, y)
+    if not levelData.scrolls then return nil, nil, nil end
+    
+    local handleSize = 8
+    for i, scroll in ipairs(levelData.scrolls) do
+        -- Check corner handles
+        if pointInHandle(x, y, scroll.x - scroll.width/2, scroll.y - scroll.height/2, handleSize) then
+            return i, "corner_tl", scroll
+        elseif pointInHandle(x, y, scroll.x + scroll.width/2, scroll.y - scroll.height/2, handleSize) then
+            return i, "corner_tr", scroll
+        elseif pointInHandle(x, y, scroll.x - scroll.width/2, scroll.y + scroll.height/2, handleSize) then
+            return i, "corner_bl", scroll
+        elseif pointInHandle(x, y, scroll.x + scroll.width/2, scroll.y + scroll.height/2, handleSize) then
+            return i, "corner_br", scroll
+        -- Check edge handles
+        elseif pointInHandle(x, y, scroll.x, scroll.y - scroll.height/2, handleSize) then
+            return i, "edge_top", scroll
+        elseif pointInHandle(x, y, scroll.x, scroll.y + scroll.height/2, handleSize) then
+            return i, "edge_bottom", scroll
+        elseif pointInHandle(x, y, scroll.x - scroll.width/2, scroll.y, handleSize) then
+            return i, "edge_left", scroll
+        elseif pointInHandle(x, y, scroll.x + scroll.width/2, scroll.y, handleSize) then
+            return i, "edge_right", scroll
+        end
+    end
+    return nil, nil, nil
+end
+
+-- Helper function to find which portal handle is clicked
+local function findPortalHandle(x, y)
+    if not levelData.portals then return nil, nil, nil end
+    
+    local handleSize = 8
+    for i, portal in ipairs(levelData.portals) do
+        -- Check corner handles
+        if pointInHandle(x, y, portal.x - portal.width/2, portal.y - portal.height/2, handleSize) then
+            return i, "corner_tl", portal
+        elseif pointInHandle(x, y, portal.x + portal.width/2, portal.y - portal.height/2, handleSize) then
+            return i, "corner_tr", portal
+        elseif pointInHandle(x, y, portal.x - portal.width/2, portal.y + portal.height/2, handleSize) then
+            return i, "corner_bl", portal
+        elseif pointInHandle(x, y, portal.x + portal.width/2, portal.y + portal.height/2, handleSize) then
+            return i, "corner_br", portal
+        -- Check edge handles
+        elseif pointInHandle(x, y, portal.x, portal.y - portal.height/2, handleSize) then
+            return i, "edge_top", portal
+        elseif pointInHandle(x, y, portal.x, portal.y + portal.height/2, handleSize) then
+            return i, "edge_bottom", portal
+        elseif pointInHandle(x, y, portal.x - portal.width/2, portal.y, handleSize) then
+            return i, "edge_left", portal
+        elseif pointInHandle(x, y, portal.x + portal.width/2, portal.y, handleSize) then
+            return i, "edge_right", portal
+        end
+    end
+    return nil, nil, nil
+end
+
 -- Helper function to find which triangle vertex is clicked
 local function findTriangleVertex(x, y)
     if not levelData.customTriangles then return nil, nil, nil end
@@ -998,6 +1108,142 @@ local function handleBoxResize(mx, my)
     end
 end
 
+-- Helper function to handle scroll resizing
+local function handleScrollResize(mx, my)
+    local scroll = editorState.dragObject
+    local handle = editorState.dragHandle
+    
+    if handle == "corner_tl" then
+        local newWidth = (scroll.x + scroll.width/2) - mx
+        local newHeight = (scroll.y + scroll.height/2) - my
+        if newWidth > 10 and newHeight > 10 then
+            scroll.width = newWidth
+            scroll.height = newHeight
+            scroll.x = mx + newWidth/2
+            scroll.y = my + newHeight/2
+        end
+    elseif handle == "corner_tr" then
+        local newWidth = mx - (scroll.x - scroll.width/2)
+        local newHeight = (scroll.y + scroll.height/2) - my
+        if newWidth > 10 and newHeight > 10 then
+            scroll.width = newWidth
+            scroll.height = newHeight
+            scroll.x = mx - newWidth/2
+            scroll.y = my + newHeight/2
+        end
+    elseif handle == "corner_bl" then
+        local newWidth = (scroll.x + scroll.width/2) - mx
+        local newHeight = my - (scroll.y - scroll.height/2)
+        if newWidth > 10 and newHeight > 10 then
+            scroll.width = newWidth
+            scroll.height = newHeight
+            scroll.x = mx + newWidth/2
+            scroll.y = my - newHeight/2
+        end
+    elseif handle == "corner_br" then
+        local newWidth = mx - (scroll.x - scroll.width/2)
+        local newHeight = my - (scroll.y - scroll.height/2)
+        if newWidth > 10 and newHeight > 10 then
+            scroll.width = newWidth
+            scroll.height = newHeight
+            scroll.x = mx - newWidth/2
+            scroll.y = my - newHeight/2
+        end
+    elseif handle == "edge_top" then
+        local newHeight = (scroll.y + scroll.height/2) - my
+        if newHeight > 10 then
+            scroll.height = newHeight
+            scroll.y = my + newHeight/2
+        end
+    elseif handle == "edge_bottom" then
+        local newHeight = my - (scroll.y - scroll.height/2)
+        if newHeight > 10 then
+            scroll.height = newHeight
+            scroll.y = my - newHeight/2
+        end
+    elseif handle == "edge_left" then
+        local newWidth = (scroll.x + scroll.width/2) - mx
+        if newWidth > 10 then
+            scroll.width = newWidth
+            scroll.x = mx + newWidth/2
+        end
+    elseif handle == "edge_right" then
+        local newWidth = mx - (scroll.x - scroll.width/2)
+        if newWidth > 10 then
+            scroll.width = newWidth
+            scroll.x = mx - newWidth/2
+        end
+    end
+end
+
+-- Helper function to handle portal resizing
+local function handlePortalResize(mx, my)
+    local portal = editorState.dragObject
+    local handle = editorState.dragHandle
+    
+    if handle == "corner_tl" then
+        local newWidth = (portal.x + portal.width/2) - mx
+        local newHeight = (portal.y + portal.height/2) - my
+        if newWidth > 10 and newHeight > 10 then
+            portal.width = newWidth
+            portal.height = newHeight
+            portal.x = mx + newWidth/2
+            portal.y = my + newHeight/2
+        end
+    elseif handle == "corner_tr" then
+        local newWidth = mx - (portal.x - portal.width/2)
+        local newHeight = (portal.y + portal.height/2) - my
+        if newWidth > 10 and newHeight > 10 then
+            portal.width = newWidth
+            portal.height = newHeight
+            portal.x = mx - newWidth/2
+            portal.y = my + newHeight/2
+        end
+    elseif handle == "corner_bl" then
+        local newWidth = (portal.x + portal.width/2) - mx
+        local newHeight = my - (portal.y - portal.height/2)
+        if newWidth > 10 and newHeight > 10 then
+            portal.width = newWidth
+            portal.height = newHeight
+            portal.x = mx + newWidth/2
+            portal.y = my - newHeight/2
+        end
+    elseif handle == "corner_br" then
+        local newWidth = mx - (portal.x - portal.width/2)
+        local newHeight = my - (portal.y - portal.height/2)
+        if newWidth > 10 and newHeight > 10 then
+            portal.width = newWidth
+            portal.height = newHeight
+            portal.x = mx - newWidth/2
+            portal.y = my - newHeight/2
+        end
+    elseif handle == "edge_top" then
+        local newHeight = (portal.y + portal.height/2) - my
+        if newHeight > 10 then
+            portal.height = newHeight
+            portal.y = my + newHeight/2
+        end
+    elseif handle == "edge_bottom" then
+        local newHeight = my - (portal.y - portal.height/2)
+        if newHeight > 10 then
+            portal.height = newHeight
+            portal.y = my - newHeight/2
+        end
+    elseif handle == "edge_left" then
+        local newWidth = (portal.x + portal.width/2) - mx
+        if newWidth > 10 then
+            portal.width = newWidth
+            portal.x = mx + newWidth/2
+        end
+    elseif handle == "edge_right" then
+        local newWidth = mx - (portal.x - portal.width/2)
+        if newWidth > 10 then
+            portal.width = newWidth
+            portal.x = mx - newWidth/2
+        end
+    end
+end
+
 -- Helper function to handle triangle vertex movement
 local function handleTriangleVertexMove(mx, my)
     local triangle = editorState.dragObject
@@ -1122,6 +1368,10 @@ function love.update(dt)
             handlePlayerResize(mx, my)
         elseif editorState.dragType == "box_resize" then
             handleBoxResize(mx, my)
+        elseif editorState.dragType == "scroll_resize" then
+            handleScrollResize(mx, my)
+        elseif editorState.dragType == "portal_resize" then
+            handlePortalResize(mx, my)
         elseif editorState.dragType == "triangle_vertex" then
             handleTriangleVertexMove(mx, my)
         elseif editorState.dragType == "box_move" then
@@ -1248,6 +1498,26 @@ function love.mousepressed(x, y, button)
                     editorState.dragging = true
                     editorState.dragType = "box_resize"
                     editorState.dragObject = box
+                    editorState.dragHandle = handleType
+                    return
+                end
+                
+                -- Check for scroll handles
+                local scrollIndex, handleType, scroll = findScrollHandle(mx, my)
+                if scrollIndex then
+                    editorState.dragging = true
+                    editorState.dragType = "scroll_resize"
+                    editorState.dragObject = scroll
+                    editorState.dragHandle = handleType
+                    return
+                end
+                
+                -- Check for portal handles
+                local portalIndex, handleType, portal = findPortalHandle(mx, my)
+                if portalIndex then
+                    editorState.dragging = true
+                    editorState.dragType = "portal_resize"
+                    editorState.dragObject = portal
                     editorState.dragHandle = handleType
                     return
                 end
