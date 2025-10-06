@@ -3,7 +3,7 @@ echo Building web export for Export Project...
 
 if exist game.love del game.love
 echo Creating game.love package...
-powershell -Command "Compress-Archive -Force -Path main.lua, conf.lua -DestinationPath game.zip"
+powershell -Command "Compress-Archive -Force -Path *.lua, *.dat, gfx -DestinationPath game.zip"
 if %ERRORLEVEL% NEQ 0 (
     echo Error creating game.zip
     pause
@@ -26,7 +26,7 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-powershell -Command "(Get-Content web\index.html) -replace 'width=\"800\" height=\"600\"', 'width=\"520\" height=\"800\"' | Set-Content web\index.html"
+powershell -Command "(Get-Content web\index.html) -replace 'width=\"800\" height=\"600\"', 'width=\"1024\" height=\"768\"' | Set-Content web\index.html"
 if %ERRORLEVEL% NEQ 0 (
     echo Warning: Failed to update canvas dimensions
 )

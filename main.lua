@@ -33,24 +33,32 @@ local levelsConfig = {
 		name = "Balcony",
 		displayName = "Balcony",
 		filename = "level2.dat",
-		position = {x = 0.5, y = 0.5}, -- Relative position on world map (0-1)
-		unlocked = true -- Unlocked by completing level1
+		position = {x = 0.4, y = 0.5}, -- Relative position on world map (0-1)
+		unlocked = false -- Unlocked by completing level1
 	},
 	{
 		id = "level4",
 		name = "Forest",
 		displayName = "Forest",
 		filename = "level4.dat",
+		position = {x = 0.6, y = 0.5},
+		unlocked = false
+	},
+	{
+		id = "level5",
+		name = "Basement",
+		displayName = "Basement",
+		filename = "level5.dat",
 		position = {x = 0.8, y = 0.5},
-		unlocked = true
+		unlocked = false
 	},
 	{
 		id = "level_end",
 		name = "Game Complete", 
 		displayName = "Complete!",
 		filename = "level_end.dat",
-		position = {x = 0.5, y = 0.8},
-		unlocked = true
+		position = {x = 0.5, y = 0.85},
+		unlocked = false
 	}
 	-- Add new levels here easily:
 	-- {

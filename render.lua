@@ -149,11 +149,6 @@ function Render.drawWizard()
 	love.graphics.setColor(1, 1, 1) -- white tint (no color modification)
 	love.graphics.draw(currentImage, 0, 0, 0, physicsW/imgW, physicsH/imgH, imgW/2, imgH/2)
 	
-	-- Draw debug box around the physics shape
-	love.graphics.setColor(1, 0, 0, 0.8) -- red with transparency
-	love.graphics.setLineWidth(2)
-	love.graphics.rectangle("line", -physicsW/2, -physicsH/2, physicsW, physicsH)
-	
 	love.graphics.pop()
 end
 
@@ -716,7 +711,7 @@ function Render.drawWorldText()
 					fontSize = 24
 				},
 				{
-					text = "Have this one last special one.",
+					text = "Good job.",
 					color = {0.9, 0.9, 0.9}, -- Light gray
 					fontSize = 24
 				}
@@ -744,6 +739,21 @@ function Render.drawWorldText()
 	
 	local specialLevel = specialTexts[levelName]
 	if specialLevel then
+		-- Check if this is level1 and modify text based on Levitation spell
+		if levelName == "level1" then
+			local activeSpellEffects = activeSpellEffects()
+			local canMove = activeSpellEffects["Levitation"] == true
+			
+			if canMove then
+				specialLevel = {
+					text = "A/W/D to levitate",
+					color = {0.2, 0.8, 1}, -- Blue
+					fontSize = 16,
+					position = {x = 0.3, y = 0.1} -- Top left
+				}
+			end
+		end
+		
 		-- Get screen dimensions
 		local screenWidth = love.graphics.getWidth()
 		local screenHeight = love.graphics.getHeight()
