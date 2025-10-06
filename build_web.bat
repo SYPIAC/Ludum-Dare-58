@@ -19,7 +19,8 @@ if %ERRORLEVEL% NEQ 0 (
 
 if not exist web mkdir web
 echo Running love.js to generate web version...
-node "%APPDATA%\npm\node_modules\love.js\index.js" game.love web --title "Export Project"
+echo Using 20MB memory allocation for optimal download size...
+node "%APPDATA%\npm\node_modules\love.js\index.js" game.love web --title "Export Project" --memory 20971520
 if %ERRORLEVEL% NEQ 0 (
     echo Error generating web version
     pause
@@ -51,3 +52,6 @@ echo Build complete!
 echo - Web files in: web folder
 echo - Itch.io package: export_web.zip
 echo - Local testing: cd web ^& run_server.bat
+echo.
+echo Package size information:
+powershell -Command "Get-ChildItem export_web.zip | Select-Object Name, @{Name='Size(MB)';Expression={[math]::Round($_.Length/1MB,2)}}"

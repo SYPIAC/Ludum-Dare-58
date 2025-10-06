@@ -136,6 +136,19 @@ end
 local function loadForegroundImages(baseImagePath)
 	foregroundImages = {}
 	
+	-- Check if baseImagePath is valid
+	if not baseImagePath then
+		print("Warning: baseImagePath is nil for loadForegroundImages")
+		return
+	end
+	
+	if type(baseImagePath) ~= "string" then
+		print("Warning: baseImagePath is not a string for loadForegroundImages: " .. tostring(baseImagePath) .. " (type: " .. type(baseImagePath) .. ")")
+		return
+	end
+	
+	print("Loading foreground images for: " .. baseImagePath)
+	
 	-- Extract the base path without extension
 	local basePath = baseImagePath:gsub("%.png$", ""):gsub("%.jpg$", ""):gsub("%.jpeg$", "")
 	
@@ -143,16 +156,27 @@ local function loadForegroundImages(baseImagePath)
 	local suffix = 1
 	while true do
 		local foregroundPath = basePath .. "_" .. suffix .. ".png"
-		local success, image = pcall(function()
-			return love.graphics.newImage(foregroundPath)
-		end)
 		
-		if success then
-			table.insert(foregroundImages, image)
-			print("Loaded foreground image: " .. foregroundPath)
-			suffix = suffix + 1
+		-- Check if file exists first (web version compatibility)
+		local fileExists = love.filesystem.getInfo(foregroundPath) ~= nil
+		
+		if fileExists then
+			local success, image = pcall(function()
+				return love.graphics.newImage(foregroundPath)
+			end)
+			
+			-- Check if the image loaded successfully and is a valid image object
+			if success and image and image ~= false and type(image) == "userdata" then
+				-- Image loaded successfully and is a valid image object
+				table.insert(foregroundImages, image)
+				print("Loaded foreground image: " .. foregroundPath)
+				suffix = suffix + 1
+			else
+				-- Image failed to load, stop trying
+				break
+			end
 		else
-			-- No more images with this suffix, stop loading
+			-- File doesn't exist, stop loading
 			break
 		end
 	end
