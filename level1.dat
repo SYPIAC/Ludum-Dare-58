@@ -25,5 +25,8 @@ return {
     portals = {
         {x = 918, y = 650, width = 100, height = 100, targetLevel = "level2"}
     },
+    fallingAxes = {
+        {x = 300, y = 250, width = 60, height = 60, minY = 150, maxY = 350, speed = 200}
+    },
     backgroundImage = "gfx/background.jpg"
 }

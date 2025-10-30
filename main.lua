@@ -12,6 +12,7 @@ local staticBoxes = {} -- Array to store static boxes
 local staticTriangles = {} -- Array to store static triangles
 local scrolls = {} -- Array to store scrolls
 local portals = {} -- Array to store portals
+local fallingAxes = {} -- Array to store falling axes
 local currentLevel = nil -- Current level data
 local currentLevelName = "level1" -- Track current level name
 local worldMapOpen = false -- World map overlay state
@@ -263,6 +264,27 @@ local function createPortal(x, y, width, height, targetLevel)
 	return portal
 end
 
+-- Function to create a falling axe obstacle
+-- x, y are the center coordinates
+-- width, height are the dimensions (default 60x60)
+-- minY, maxY are the vertical range for movement
+-- speed is pixels per second (default 200)
+local function createFallingAxe(x, y, width, height, minY, maxY, speed)
+	local axe = {}
+	axe.x = x
+	axe.y = y
+	axe.width = width or 60
+	axe.height = height or 60
+	axe.minY = minY or (y - 100)
+	axe.maxY = maxY or (y + 100)
+	axe.speed = speed or 200
+	axe.direction = 1 -- 1 for moving down, -1 for moving up
+	axe.startY = y -- Store starting position
+	
+	table.insert(fallingAxes, axe)
+	return axe
+end
+
 
 -- Function to clear all static shapes
 local function clearStaticShapes()
@@ -285,6 +307,9 @@ local function clearStaticShapes()
 	-- Clear scrolls and portals (no physics bodies to destroy)
 	scrolls = {}
 	portals = {}
+	
+	-- Clear falling axes (no physics bodies to destroy)
+	fallingAxes = {}
 end
 
 -- Function to load a level from a data file
@@ -376,6 +401,15 @@ local function loadLevel(filename)
 		end
 	end
 	
+	-- Load falling axes
+	if levelData.fallingAxes then
+		for _, axeData in ipairs(levelData.fallingAxes) do
+			local x = axeData.x
+			local y = axeData.y
+			createFallingAxe(x, y, axeData.width, axeData.height, axeData.minY, axeData.maxY, axeData.speed)
+		end
+	end
+	
 	-- Load background image if specified
 	if levelData.backgroundImage then
 		local success, img = pcall(function()
@@ -400,6 +434,7 @@ local function loadLevel(filename)
 		staticTriangles = staticTriangles,
 		scrolls = scrolls,
 		portals = portals,
+		fallingAxes = fallingAxes,
 		wizardImage = wizardImage,
 		wizardCastingImage = wizardCastingImage,
 		wizardGreenImage = wizardGreenImage,
@@ -576,6 +611,7 @@ function love.load()
 		staticTriangles = staticTriangles,
 		scrolls = scrolls,
 		portals = portals,
+		fallingAxes = fallingAxes,
 		wizardImage = wizardImage,
 		wizardCastingImage = wizardCastingImage,
 		wizardGreenImage = wizardGreenImage,
@@ -715,10 +751,44 @@ local function checkPlayerCollisions()
 			end
 		end
 	end
+	
+	-- Check falling axe collisions
+	for _, axe in ipairs(fallingAxes) do
+		local dx = math.abs(px - axe.x)
+		local dy = math.abs(py - axe.y)
+		
+		if dx < (playerHalfWidth + axe.width/2) and dy < (playerHalfHeight + axe.height/2) then
+			-- Player hit by falling axe - reset level
+			print("Player hit by falling axe! Resetting level...")
+			loadLevel(currentLevelName .. ".dat")
+			break
+		end
+	end
 end
 
 function love.update(dt)
 	world:update(dt)
+	
+	-- Update falling axes movement
+	for _, axe in ipairs(fallingAxes) do
+		-- Move the axe based on direction and speed
+		local moveDistance = axe.speed * dt * axe.direction
+		axe.y = axe.y + moveDistance
+		
+		-- Check if axe reached bounds and reverse direction
+		if axe.direction == 1 then -- Moving down
+			if axe.y >= axe.maxY then
+				axe.y = axe.maxY
+				axe.direction = -1 -- Reverse to move up
+			end
+		else -- Moving up
+			if axe.y <= axe.minY then
+				axe.y = axe.minY
+				axe.direction = 1 -- Reverse to move down
+			end
+		end
+	end
+	
 	checkGroundContact()
 	applyMovementForces()
 	checkPlayerCollisions()

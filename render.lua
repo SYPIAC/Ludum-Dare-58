@@ -5,7 +5,7 @@ local Spellbook = require("spellbook")
 local Render = {}
 
 -- Global variables that need to be exposed from main.lua
-local player, staticBoxes, staticTriangles, scrolls, portals, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, foregroundImages, scrollImage, portalImage, spellbookImage, spellImages, buttonLeftImage, buttonRightImage
+local player, staticBoxes, staticTriangles, scrolls, portals, fallingAxes, wizardImage, wizardCastingImage, wizardGreenImage, wizardGreenCastingImage, backgroundImage, foregroundImages, scrollImage, portalImage, spellbookImage, spellImages, buttonLeftImage, buttonRightImage
 local font, grimoireFont, spellTitleFont, spellDescFont
 local isOnGround, grimoireOpen, currentPage, spells, activeSpellEffects, magicSchool, bookmarks
 local worldMapOpen, completedLevels, currentLevelName, levelsConfig, isLevelUnlocked
@@ -17,6 +17,7 @@ function Render.setGlobals(globals)
 	staticTriangles = globals.staticTriangles
 	scrolls = globals.scrolls
 	portals = globals.portals
+	fallingAxes = globals.fallingAxes
 	wizardImage = globals.wizardImage
 	wizardCastingImage = globals.wizardCastingImage
 	wizardGreenImage = globals.wizardGreenImage
@@ -285,6 +286,27 @@ function Render.drawPortals()
 		local scaleY = portal.height / portalImage:getHeight()
 		love.graphics.draw(portalImage, 0, 0, 0, scaleX, scaleY, portalImage:getWidth()/2, portalImage:getHeight()/2)
 		
+			
+			love.graphics.pop()
+		end
+	end
+end
+
+-- Draw falling axes
+function Render.drawFallingAxes()
+	if fallingAxes then
+		for _, axe in ipairs(fallingAxes) do
+			love.graphics.push()
+			love.graphics.translate(axe.x, axe.y)
+			
+			-- Draw a red rectangle as placeholder (user will add graphics later)
+			love.graphics.setColor(0.8, 0.2, 0.2) -- Red color for axes
+			love.graphics.rectangle("fill", -axe.width/2, -axe.height/2, axe.width, axe.height)
+			
+			-- Draw a border
+			love.graphics.setColor(0.5, 0.1, 0.1)
+			love.graphics.setLineWidth(2)
+			love.graphics.rectangle("line", -axe.width/2, -axe.height/2, axe.width, axe.height)
 			
 			love.graphics.pop()
 		end
@@ -673,6 +695,9 @@ function Render.draw()
 	
 	-- Draw portals (behind wizard)
 	Render.drawPortals()
+	
+	-- Draw falling axes (behind wizard)
+	Render.drawFallingAxes()
 	
 	-- Draw wizard
 	Render.drawWizard()
